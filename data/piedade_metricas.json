@@ -1,0 +1,13 @@
+{
+    "2025-10-10": {
+        "consistencia": {
+            "leitura_biblica": false,
+            "oracao": false,
+            "catecismo": false
+        },
+        "qualitativo": {
+            "oracao_qualidade": "Ausente",
+            "pecado_atitude": "Indiferença"
+        }
+    }
+}
