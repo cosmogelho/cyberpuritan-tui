@@ -35,3 +35,9 @@ LIVROS_E_ABREVIACOES = [
     ("2 João", "2Jo"), ("3 João", "3Jo"), ("Judas", "Jd"), ("Apocalipse", "Ap")
 ]
 MAPA_ABREVIACOES = {abrev.lower(): nome for nome, abrev in LIVROS_E_ABREVIACOES}
+
+# Adicione esta linha em config.py
+CALENDARIO_SEMANAL = {
+    1: "Dia de Reunião de Oração",  # Terça-feira (Monday is 0)
+    3: "Dia de Estudo de Doutrina", # Quinta-feira
+}

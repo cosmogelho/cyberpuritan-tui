@@ -2,6 +2,8 @@
 from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import Prompt
+from rich.text import Text
+from rich.console import Group
 from app.core.theme import console
 
 def prompt_nova_resolucao() -> dict:
@@ -35,4 +37,24 @@ def exibir_lista_resolucoes(resolutions: list[tuple[str, dict]]):
     
     console.print(tabela)
 
-# (Adicionaremos a view de revisão individual no próximo passo)
+# --- FUNÇÃO FALTANTE ADICIONADA AQUI ---
+def exibir_resolucao_para_revisao(res_id: str, dados: dict, titulo: str):
+    """Exibe um painel destacado com uma única resolução para meditação."""
+    
+    info_basica = Text()
+    info_basica.append("Categoria: ", style="prompt").append(dados.get('category', 'N/D') + "\n")
+    info_basica.append("Revisões: ", style="prompt").append(str(dados.get('review_count', 0)))
+
+    texto_resolucao = Text(dados.get('text', ''), justify="center", style="bold")
+    
+    render_group = Group(
+        info_basica,
+        Panel(texto_resolucao, border_style="dim white", padding=(1, 2))
+    )
+
+    painel_geral = Panel(
+        render_group,
+        title=f"{titulo} - Resolução #{res_id}",
+        border_style="painel_borda"
+    )
+    console.print(painel_geral)
