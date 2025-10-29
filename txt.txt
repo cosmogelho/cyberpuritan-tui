@@ -1,0 +1,1405 @@
+### FILE: ./app/cli.py ###
+import click
+from app.core.config import VERSAO_BIBLIA_PADRAO
+from app.models import bible
+from app.ui import bible_view
+from app.ui.main_menu import iniciar_menu_interativo
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    """Ferramenta devocional Cyber-Puritano. Inicia em modo interativo se nenhum comando for usado."""
+    if ctx.invoked_subcommand is None:
+        iniciar_menu_interativo()
+
+@cli.command()
+@click.argument("livro")
+@click.argument("capitulo", type=int)
+@click.argument("versiculo", type=int, required=False)
+@click.option("--versao", "-v", default=VERSAO_BIBLIA_PADRAO, help="Versão da Bíblia.")
+def biblia(livro: str, capitulo: int, versiculo: int | None, versao: str):
+    """Exibe um texto da Bíblia diretamente no terminal."""
+    # 1. Chama o modelo para buscar os dados
+    resultado = bible.obter_passagem(versao, livro, capitulo, versiculo)
+    # 2. Passa os dados para a view exibir
+    bible_view.exibir_passagem(resultado)
+
+# Outros comandos podem ser adicionados aqui seguindo o mesmo padrão.
+
+### FILE: ./app/core/bible_parser.py ###
+import re
+from app.core.config import LIVROS_E_ABREVIACOES
+
+# Constrói um mapa de todas as abreviações e nomes para um nome canônico
+BOOK_MAP = {}
+for nome, abrev in LIVROS_E_ABREVIACOES:
+    BOOK_MAP[nome.lower().replace(" ", "")] = nome
+    BOOK_MAP[abrev.lower().replace(" ", "")] = nome
+
+# Expressão regular para encontrar referências bíblicas
+# Ex: 1 Jo 3:16-18, Gn 1:1, Pv 10:4
+BIBLE_REFERENCE_REGEX = re.compile(
+    r'(\d?\s*[a-zA-Záéíóúâêôãõç]+)\.?\s*(\d+)(?::(\d+)(?:-(\d+))?)?',
+    re.IGNORECASE
+)
+
+def parse_references(text: str) -> list[dict]:
+    """
+    Analisa um texto e extrai todas as referências bíblicas encontradas.
+    Retorna uma lista de dicionários com 'book', 'chapter', 'start_verse', 'end_verse'.
+    """
+    if not text:
+        return []
+    
+    found_references = []
+    matches = BIBLE_REFERENCE_REGEX.finditer(text)
+    
+    for match in matches:
+        book_input, chapter, start_v, end_v = match.groups()
+        
+        # Normaliza o nome do livro
+        book_key = book_input.lower().replace(" ", "").replace(".", "")
+        book_canonical = BOOK_MAP.get(book_key)
+        
+        if not book_canonical:
+            continue
+            
+        chapter_num = int(chapter)
+        start_verse = int(start_v) if start_v else 1
+        end_verse = int(end_v) if end_v else start_verse
+        
+        # Expande o intervalo de versículos
+        for verse_num in range(start_verse, end_verse + 1):
+            found_references.append({
+                "book": book_canonical,
+                "chapter": chapter_num,
+                "verse": verse_num
+            })
+            
+    return found_references
+
+### FILE: ./app/core/config.py ###
+import os
+
+# --- Gestão de Caminhos ---
+APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(APP_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+
+# --- Arquivos de Dados ---
+# Apontando para os novos bancos de dados centralizados
+DB_BIBLIA_PATH = os.path.join(DATA_DIR, 'Biblia.sqlite')
+DB_DADOS_PATH = os.path.join(DATA_DIR, 'dados.db')
+
+# --- Configurações da Aplicação ---
+VERSAO_BIBLIA_PADRAO = "NAA"
+VERSOES_BIBLIA_DISPONIVEIS = ["NAA", "ARA", "NVI"] # Manter para o seletor da UI
+
+# --- Constantes da Bíblia ---
+LIVROS_E_ABREVIACOES = [
+    ("Gênesis", "Gn"), ("Êxodo", "Ex"), ("Levítico", "Lv"), ("Números", "Nm"),
+    ("Deuteronômio", "Dt"), ("Josué", "Js"), ("Juízes", "Jz"), ("Rute", "Rt"),
+    ("1 Samuel", "1Sm"), ("2 Samuel", "2Sm"), ("1 Reis", "1Rs"), ("2 Reis", "2Rs"),
+    ("1 Crônicas", "1Cr"), ("2 Crônicas", "2Cr"), ("Esdras", "Ed"), ("Neemias", "Ne"),
+    ("Ester", "Et"), ("Jó", "Jó"), ("Salmos", "Sl"), ("Provérbios", "Pv"),
+    ("Eclesiastes", "Ec"), ("Cantares", "Ct"), ("Isaías", "Is"), ("Jeremias", "Jr"),
+    ("Lamentações", "Lm"), ("Ezequiel", "Ez"), ("Daniel", "Dn"), ("Oséias", "Os"),
+    ("Joel", "Jl"), ("Amós", "Am"), ("Obadias", "Ob"), ("Jonas", "Jn"),
+    ("Miquéias", "Mq"), ("Naum", "Na"), ("Habacuque", "Hc"), ("Sofonias", "Sf"),
+    ("Ageu", "Ag"), ("Zacarias", "Zc"), ("Malaquias", "Ml"), ("Mateus", "Mt"),
+    ("Marcos", "Mc"), ("Lucas", "Lc"), ("João", "Jo"), ("Atos", "At"),
+    ("Romanos", "Rm"), ("1 Coríntios", "1Co"), ("2 Coríntios", "2Co"), ("Gálatas", "Gl"),
+    ("Efésios", "Ef"), ("Filipenses", "Fp"), ("Colossenses", "Cl"),
+    ("1 Tessalonicenses", "1Ts"), ("2 Tessalonicenses", "2Ts"), ("1 Timóteo", "1Tm"),
+    ("2 Timóteo", "2Tm"), ("Tito", "Tt"), ("Filemom", "Fm"), ("Hebreus", "Hb"),
+    ("Tiago", "Tg"), ("1 Pedro", "1Pe"), ("2 Pedro", "2Pe"), ("1 João", "1Jo"),
+    ("2 João", "2Jo"), ("3 João", "3Jo"), ("Judas", "Jd"), ("Apocalipse", "Ap")
+]
+MAPA_ABREVIACOES = {abrev.lower(): nome for nome, abrev in LIVROS_E_ABREVIACOES}
+
+# Adicione esta linha em config.py
+CALENDARIO_SEMANAL = {
+    1: "Dia de Reunião de Oração",  # Terça-feira (Monday is 0)
+    3: "Dia de Estudo de Doutrina", # Quinta-feira
+}
+
+### FILE: ./app/core/connections.py ###
+# app/core/connections.py
+import sqlite3
+from .config import DB_DADOS_PATH, DB_BIBLIA_PATH
+
+class ConnectionManager:
+    def __init__(self):
+        self.dados_conn = None
+        self.biblia_conn = None
+
+    def start(self):
+        try:
+            self.dados_conn = sqlite3.connect(DB_DADOS_PATH)
+            self.dados_conn.row_factory = sqlite3.Row
+            self.biblia_conn = sqlite3.connect(DB_BIBLIA_PATH)
+            self.biblia_conn.row_factory = sqlite3.Row
+            print("Conexões com o banco de dados inicializadas.")
+        except sqlite3.Error as e:
+            print(f"ERRO CRÍTICO AO CONECTAR AO BANCO DE DADOS: {e}")
+            self.dados_conn = None
+            self.biblia_conn = None
+    
+    def close(self):
+        if self.dados_conn:
+            self.dados_conn.close()
+        if self.biblia_conn:
+            self.biblia_conn.close()
+        print("Conexões com o banco de dados fechadas.")
+
+db_manager = ConnectionManager()
+### FILE: ./app/core/database.py ###
+import sqlite3
+import os
+from .config import DB_DADOS_PATH, DB_BIBLIA_PATH
+from .theme import console
+
+def _criar_conexao(db_path: str) -> sqlite3.Connection | None:
+    """Cria e retorna uma conexão com um banco de dados SQLite."""
+    if not os.path.exists(db_path):
+        console.print(f"[erro]ERRO: Arquivo de banco de dados não encontrado em '{db_path}'.[/erro]")
+        return None
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.OperationalError as e:
+        console.print(f"[erro]ERRO: Não foi possível conectar ao banco de dados em '{db_path}'.[/erro]")
+        console.print(f"[info]Detalhes: {e}[/info]")
+        return None
+
+def conectar_dados_pessoais() -> sqlite3.Connection | None:
+    """Conecta ao banco de dados com notas, sermões, resoluções, etc."""
+    return _criar_conexao(DB_DADOS_PATH)
+
+def conectar_biblia() -> sqlite3.Connection | None:
+    """Conecta ao banco de dados unificado da Bíblia."""
+    return _criar_conexao(DB_BIBLIA_PATH)
+
+### FILE: ./app/core/data_models.py ###
+# app/core/data_models.py
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class Record:
+    id: int
+    category: str
+    titulo: str
+    author: Optional[str]
+    context: Optional[str]
+    data: Optional[str]
+    passagem_principal: Optional[str]
+    anotacoes: Optional[str]
+    aplicacoes: Optional[str]
+
+@dataclass
+class Resolution:
+    id: int
+    text: str
+    category: Optional[str]
+    created_at: Optional[str]
+    last_reviewed_at: Optional[str]
+    review_count: int
+### FILE: ./app/core/theme.py ###
+from rich.console import Console
+from rich.theme import Theme
+
+custom_theme = Theme({
+    "titulo": "bold cyan",
+    "subtitulo": "dim white",
+    "prompt": "bold green",
+    "referencia": "yellow",
+    "erro": "bold red",
+    "sucesso": "bold green",
+    "info": "dim white",
+    "painel_borda": "cyan",
+    "destaque": "bold magenta",
+})
+
+console = Console(theme=custom_theme)
+
+### FILE: ./app/models/bible.py ###
+# app/models/bible.py
+from app.core.connections import db_manager
+from app.core.config import MAPA_ABREVIACOES, LIVROS_E_ABREVIACOES
+
+def _normalizar_nome_livro(nome_input: str) -> str | None:
+    input_lower = nome_input.lower()
+    if input_lower in MAPA_ABREVIACOES:
+        return MAPA_ABREVIACOES[input_lower]
+    for nome_canonico, _ in LIVROS_E_ABREVIACOES:
+        if nome_canonico.lower() == input_lower:
+            return nome_canonico
+    return None
+
+def _get_cross_references(book: str, chapter: int, verse: int) -> list:
+    if not db_manager.dados_conn: return []
+    cursor = db_manager.dados_conn.cursor()
+    sql = """
+        SELECT cr.titulo, cr.author, vr.record_id
+        FROM verse_references vr
+        JOIN church_records cr ON vr.record_id = cr.id
+        WHERE vr.book = ? AND vr.chapter = ? AND vr.verse = ?
+    """
+    rows = cursor.execute(sql, (book, chapter, verse)).fetchall()
+    return [dict(row) for row in rows]
+
+def obter_passagem(versao: str, livro: str, capitulo: int, versiculo: int | None = None) -> dict:
+    if not db_manager.biblia_conn:
+        return {"erro": "Não foi possível conectar ao banco de dados da Bíblia."}
+    cursor = db_manager.biblia_conn.cursor()
+    nome_canonico = _normalizar_nome_livro(livro)
+    if not nome_canonico:
+        return {"erro": f"Livro '{livro}' não encontrado."}
+    cursor.execute("SELECT id FROM book WHERE name = ?", (nome_canonico,))
+    resultado_livro = cursor.fetchone()
+    if not resultado_livro:
+        return {"erro": f"ID do livro '{nome_canonico}' não encontrado."}
+    livro_id = resultado_livro['id']
+    ref_str = f"{nome_canonico} {capitulo}"
+    versao_upper = versao.upper()
+    if versiculo:
+        ref_str += f":{versiculo}"
+        query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? AND verse = ? AND version = ?"
+        params = (livro_id, capitulo, versiculo, versao_upper)
+    else:
+        query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? AND version = ? ORDER BY verse"
+        params = (livro_id, capitulo, versao_upper)
+    resultados = cursor.execute(query, params).fetchall()
+    if not resultados:
+        return {"erro": f"Passagem não encontrada: {ref_str} ({versao_upper})"}
+    cross_references = []
+    if versiculo:
+        cross_references = _get_cross_references(nome_canonico, capitulo, versiculo)
+    return {
+        "referencia": ref_str,
+        "versao": versao_upper,
+        "versiculos": [{"numero": r['verse'], "texto": r['text']} for r in resultados],
+        "cross_references": cross_references
+    }
+
+### FILE: ./app/models/fasting.py ###
+# app/models/fasting.py
+from datetime import datetime
+from app.core.connections import db_manager
+
+class FastingManager:
+    def start_fast(self, purpose: str, scripture: str) -> int | None:
+        if not db_manager.dados_conn: return None
+        cursor = db_manager.dados_conn.cursor()
+        sql = "INSERT INTO fasting_logs (start_date, purpose, scripture_focus, status) VALUES (?, ?, ?, 'ativo')"
+        cursor.execute(sql, (datetime.now().isoformat(), purpose, scripture))
+        db_manager.dados_conn.commit()
+        return cursor.lastrowid
+
+    def get_active_fast(self) -> dict | None:
+        if not db_manager.dados_conn: return None
+        # A linha abaixo é a que foi corrigida (não tem mais a duplicata)
+        cursor = db_manager.dados_conn.cursor()
+        row = cursor.execute("SELECT * FROM fasting_logs WHERE status = 'ativo' ORDER BY start_date DESC LIMIT 1").fetchone()
+        return dict(row) if row else None
+
+    def finish_fast(self, fast_id: int, reflection: str):
+        if not db_manager.dados_conn: return
+        # A linha abaixo é a que foi corrigida
+        cursor = db_manager.dados_conn.cursor()
+        sql = "UPDATE fasting_logs SET end_date = ?, reflection = ?, status = 'concluido' WHERE id = ?"
+        cursor.execute(sql, (datetime.now().isoformat(), reflection, fast_id))
+        db_manager.dados_conn.commit()
+
+### FILE: ./app/models/piety.py ###
+# app/models/piety.py
+import sqlite3
+from datetime import date, timedelta
+from app.core.connections import db_manager
+from app.core.theme import console
+
+class PiedadeManager:
+    def registrar_dia(self, data_str: str, dados: dict):
+        if not db_manager.dados_conn: return
+        consistencia = dados.get('consistencia', {})
+        qualitativo = dados.get('qualitativo', {})
+        sql = """INSERT OR REPLACE INTO piety (date, leitura_biblica, oracao, catecismo, oracao_qualidade, pecado_atitude) VALUES (?, ?, ?, ?, ?, ?)"""
+        params = (data_str, int(consistencia.get('leitura_biblica', False)), int(consistencia.get('oracao', False)), int(consistencia.get('catecismo', False)), qualitativo.get('oracao_qualidade'), qualitativo.get('pecado_atitude'))
+        try:
+            cursor = db_manager.dados_conn.cursor()
+            cursor.execute(sql, params)
+            db_manager.dados_conn.commit()
+        except sqlite3.Error as e:
+            console.print(f"[erro]Erro ao registrar o dia: {e}[/erro]")
+    def get_registro_dia(self, data_str: str) -> dict | None:
+        if not db_manager.dados_conn: return None
+        cursor = db_manager.dados_conn.cursor()
+        cursor.execute("SELECT * FROM piety WHERE date = ?", (data_str,))
+        row = cursor.fetchone()
+        if not row: return None
+        return {
+            "consistencia": {"leitura_biblica": bool(row['leitura_biblica']), "oracao": bool(row['oracao']), "catecismo": bool(row['catecismo'])},
+            "qualitativo": {"oracao_qualidade": row['oracao_qualidade'], "pecado_atitude": row['pecado_atitude']}
+        }
+    def gerar_analise(self, periodo_dias: int = 30) -> dict | None:
+        if not db_manager.dados_conn: return None
+        hoje, data_inicio = date.today(), date.today() - timedelta(days=periodo_dias)
+        cursor = db_manager.dados_conn.cursor()
+        query = "SELECT * FROM piety WHERE date BETWEEN ? AND ?"
+        registros_periodo = cursor.execute(query, (data_inicio.isoformat(), hoje.isoformat())).fetchall()
+        if not registros_periodo: return None
+        total_dias = len(registros_periodo)
+        analise = {'periodo_dias': periodo_dias, 'total_dias_registrados': total_dias, 'consistencia': {'leitura_biblica': 0, 'oracao': 0, 'catecismo': 0}, 'qualitativo_oracao': {}, 'qualitativo_pecado': {}}
+        for row in registros_periodo:
+            if row['leitura_biblica']: analise['consistencia']['leitura_biblica'] += 1
+            if row['oracao']: analise['consistencia']['oracao'] += 1
+            if row['catecismo']: analise['consistencia']['catecismo'] += 1
+            qual_oracao = row.get('oracao_qualidade', 'N/A')
+            analise['qualitativo_oracao'][qual_oracao] = analise['qualitativo_oracao'].get(qual_oracao, 0) + 1
+            qual_pecado = row.get('pecado_atitude', 'N/A')
+            analise['qualitativo_pecado'][qual_pecado] = analise['qualitativo_pecado'].get(qual_pecado, 0) + 1
+        return analise
+
+### FILE: ./app/models/psaltery.py ###
+# app/models/psaltery.py
+# A única mudança é a função de conexão importada e usada
+from app.core.database import conectar_dados_pessoais
+
+def buscar_versoes_salmo(numero_salmo: str) -> list | dict:
+    """Busca no banco de dados todas as versões disponíveis para um salmo."""
+    # Alterado de conectar_estudo() para conectar_dados_pessoais()
+    conn = conectar_dados_pessoais()
+    if not conn:
+        return {"erro": "Não foi possível conectar ao banco de dados."}
+        
+    try:
+        num_salmo_int = int(numero_salmo)
+        cursor = conn.cursor()
+        
+        query = "SELECT * FROM salterio WHERE CAST(referencia AS INTEGER) = ? ORDER BY referencia"
+        
+        resultados = cursor.execute(query, (num_salmo_int,)).fetchall()
+
+        if not resultados:
+            return {"erro": f"Nenhuma versão encontrada para o Salmo {numero_salmo}."}
+            
+        return [dict(row) for row in resultados]
+    except ValueError:
+        return {"erro": f"O número do salmo '{numero_salmo}' é inválido. Por favor, digite apenas números."}
+    except Exception as e:
+        return {"erro": f"Ocorreu um erro ao buscar o salmo: {e}"}
+    finally:
+        if conn:
+            conn.close()
+
+### FILE: ./app/models/record.py ###
+# app/models/record.py
+import sqlite3
+from app.core.connections import db_manager
+from app.core.data_models import Record
+from app.core.bible_parser import parse_references
+from app.core.theme import console
+
+class RecordManager:
+    def _link_verses_to_record(self, cursor: sqlite3.Cursor, record_id: int, text_with_refs: str):
+        refs = parse_references(text_with_refs)
+        if not refs: return
+        sql = "INSERT INTO verse_references (book, chapter, verse, record_id) VALUES (?, ?, ?, ?)"
+        for ref in refs:
+            cursor.execute(sql, (ref['book'], ref['chapter'], ref['verse'], record_id))
+    def add_record(self, dados: dict) -> str | None:
+        if not db_manager.dados_conn: return None
+        sql = """INSERT INTO church_records (category, titulo, author, context, data, passagem_principal, anotacoes, aplicacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
+        params = (dados.get('category'), dados.get('titulo'), dados.get('author'), dados.get('context'), dados.get('data'), dados.get('passagem_principal'), dados.get('anotacoes'), dados.get('aplicacoes'))
+        try:
+            cursor = db_manager.dados_conn.cursor()
+            cursor.execute(sql, params)
+            record_id = cursor.lastrowid
+            if dados.get('passagem_principal'):
+                self._link_verses_to_record(cursor, record_id, dados['passagem_principal'])
+            db_manager.dados_conn.commit()
+            return str(record_id)
+        except sqlite3.Error as e:
+            console.print(f"[erro]Erro ao adicionar registro: {e}[/erro]")
+            return None
+    def get_all_records(self) -> list[Record]:
+        if not db_manager.dados_conn: return []
+        cursor = db_manager.dados_conn.cursor()
+        rows = cursor.execute("SELECT id, category, data, titulo, author FROM church_records ORDER BY data DESC").fetchall()
+        return [Record(**row) for row in rows]
+    def get_record_by_id(self, record_id: str) -> Record | None:
+        if not db_manager.dados_conn: return None
+        cursor = db_manager.dados_conn.cursor()
+        row = cursor.execute("SELECT * FROM church_records WHERE id = ?", (int(record_id),)).fetchone()
+        return Record(**row) if row else None
+
+### FILE: ./app/models/resolution.py ###
+# app/models/resolution.py
+from datetime import datetime
+from app.core.connections import db_manager
+from app.core.data_models import Resolution
+
+class ResolutionManager:
+    def add_resolution(self, text: str, category: str) -> str | None:
+        if not db_manager.dados_conn: return None
+        now, sql = datetime.now().isoformat(), "INSERT INTO resolutions (text, category, created_at, review_count) VALUES (?, ?, ?, 0)"
+        cursor = db_manager.dados_conn.cursor()
+        cursor.execute(sql, (text, category, now))
+        db_manager.dados_conn.commit()
+        return str(cursor.lastrowid)
+    def get_all_resolutions(self) -> list[Resolution]:
+        if not db_manager.dados_conn: return []
+        cursor = db_manager.dados_conn.cursor()
+        rows = cursor.execute("SELECT * FROM resolutions ORDER BY id").fetchall()
+        return [Resolution(**row) for row in rows]
+    def update_review_stats(self, res_id: str):
+        if not db_manager.dados_conn: return
+        now, sql = datetime.now().isoformat(), "UPDATE resolutions SET review_count = review_count + 1, last_reviewed_at = ? WHERE id = ?"
+        cursor = db_manager.dados_conn.cursor()
+        cursor.execute(sql, (now, int(res_id)))
+        db_manager.dados_conn.commit()
+    def _get_one_resolution(self, query: str) -> Resolution | None:
+        if not db_manager.dados_conn: return None
+        cursor = db_manager.dados_conn.cursor()
+        row = cursor.execute(query).fetchone()
+        return Resolution(**row) if row else None
+    def get_random_resolution(self) -> Resolution | None:
+        return self._get_one_resolution("SELECT * FROM resolutions ORDER BY RANDOM() LIMIT 1")
+    def get_least_reviewed_resolution(self) -> Resolution | None:
+        return self._get_one_resolution("SELECT * FROM resolutions ORDER BY review_count ASC, last_reviewed_at ASC NULLS FIRST LIMIT 1")
+
+### FILE: ./app/models/sunday.py ###
+from app.core.connections import db_manager
+
+class SundayManager:
+    def log_preparation(self, prep_date: str, checks: dict):
+        if not db_manager.dados_conn: return
+        sql = """INSERT OR REPLACE INTO sunday_prep_logs (prep_date, pastor_prayer, sermon_reading, confession_prayer, worldliness_aside, congregation_prayer) VALUES (?, ?, ?, ?, ?, ?)"""
+        params = (prep_date, int(checks.get('pastor', False)), int(checks.get('leitura', False)), int(checks.get('confissao', False)), int(checks.get('mundo', False)), int(checks.get('congregacao', False)))
+        cursor = db_manager.dados_conn.cursor()
+        cursor.execute(sql, params)
+        db_manager.dados_conn.commit()
+
+### FILE: ./app/models/symbols.py ###
+# app/models/symbols.py
+from app.core.connections import db_manager
+
+def obter_simbolo(tipo: str, numero: int, secao: int | None = None) -> list | dict:
+    if not db_manager.dados_conn:
+        return {"erro": "Não foi possível conectar ao banco de dados."}
+    cursor = db_manager.dados_conn.cursor()
+    if tipo == 'cfw':
+        query = "SELECT chapter, section, title, text FROM cfw_articles WHERE chapter = ? AND (? IS NULL OR section = ?)"
+        params = (numero, secao, secao)
+    else:
+        query = f"SELECT id, question, answer FROM {tipo} WHERE id = ?"
+        params = (numero,)
+    resultados = cursor.execute(query, params).fetchall()
+    if not resultados:
+        return {"erro": "Item não encontrado."}
+    return [dict(row) for row in resultados]
+
+### FILE: ./app/reports/metrics.py ###
+# app/reports/metrics.py
+from datetime import date, timedelta
+from app.core.database import conectar_dados_pessoais
+
+def get_piety_summary(periodo_dias: int = 30) -> dict | None:
+    """Busca e calcula um resumo de consistência do diário de piedade."""
+    hoje = date.today()
+    data_inicio = hoje - timedelta(days=periodo_dias)
+    conn = conectar_dados_pessoais()
+    if not conn: return None
+
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT
+                COUNT(*) as total_dias,
+                AVG(leitura_biblica) as avg_leitura,
+                AVG(oracao) as avg_oracao,
+                AVG(catecismo) as avg_catecismo
+            FROM piety
+            WHERE date BETWEEN ? AND ?
+        """
+        params = (data_inicio.isoformat(), hoje.isoformat())
+        summary = cursor.execute(query, params).fetchone()
+
+        if not summary or summary['total_dias'] == 0:
+            return None
+        
+        # Busca as distribuições qualitativas
+        oracao_dist = cursor.execute(
+            "SELECT oracao_qualidade, COUNT(*) as count FROM piety WHERE date BETWEEN ? AND ? GROUP BY oracao_qualidade",
+            params
+        ).fetchall()
+        
+        pecado_dist = cursor.execute(
+            "SELECT pecado_atitude, COUNT(*) as count FROM piety WHERE date BETWEEN ? AND ? GROUP BY pecado_atitude",
+            params
+        ).fetchall()
+
+        return {
+            "periodo_dias": periodo_dias,
+            "total_dias_registrados": summary['total_dias'],
+            "consistencia": {
+                "Leitura Bíblica": (summary['avg_leitura'] or 0) * 100,
+                "Oração": (summary['avg_oracao'] or 0) * 100,
+                "Estudo dos Símbolos": (summary['avg_catecismo'] or 0) * 100,
+            },
+            "qualitativo_oracao": {row['oracao_qualidade']: row['count'] for row in oracao_dist},
+            "qualitativo_pecado": {row['pecado_atitude']: row['count'] for row in pecado_dist},
+        }
+    finally:
+        if conn: conn.close()
+
+def get_resolution_summary() -> dict | None:
+    """Busca e calcula um resumo das resoluções pessoais."""
+    conn = conectar_dados_pessoais()
+    if not conn: return None
+
+    try:
+        cursor = conn.cursor()
+        total = cursor.execute("SELECT COUNT(*) FROM resolutions").fetchone()[0]
+        if total == 0:
+            return None
+
+        avg_reviews = cursor.execute("SELECT AVG(review_count) FROM resolutions").fetchone()[0]
+        categories = cursor.execute("SELECT category, COUNT(*) as count FROM resolutions GROUP BY category").fetchall()
+
+        return {
+            "total_resolucoes": total,
+            "media_revisoes": avg_reviews or 0,
+            "dist_categorias": {row['category']: row['count'] for row in categories}
+        }
+    finally:
+        if conn: conn.close()
+
+### FILE: ./app/ui/bible_view.py ###
+# app/ui/bible_view.py
+from rich.panel import Panel
+from rich.text import Text
+from rich.table import Table
+from rich.console import Group
+from app.core.theme import console
+from app.core.config import LIVROS_E_ABREVIACOES
+
+def exibir_passagem(resultado: dict):
+    """Formata e exibe uma passagem bíblica e suas referências cruzadas."""
+    if "erro" in resultado:
+        console.print(f"[erro]{resultado['erro']}[/erro]")
+        return
+
+    # Painel do Texto Bíblico
+    texto_formatado = Text()
+    for v in resultado['versiculos']:
+        texto_formatado.append(f"[{v['numero']}] ", style="referencia")
+        texto_formatado.append(f"{v['texto']} ")
+    titulo = f"Bíblia {resultado['versao']} | {resultado['referencia']}"
+    painel_texto = Panel(texto_formatado, title=titulo, border_style="painel_borda")
+
+    console.print(painel_texto)
+
+    # Painel das Referências Cruzadas
+    if resultado.get("cross_references"):
+        tabela_refs = Table(title="Sua Concordância Pessoal", box=None, padding=(0, 1))
+        tabela_refs.add_column("ID", style="destaque")
+        tabela_refs.add_column("Título do Registro")
+        tabela_refs.add_column("Autor/Pregador")
+        
+        for ref in resultado["cross_references"]:
+            tabela_refs.add_row(
+                str(ref['record_id']),
+                ref['titulo'],
+                ref['author']
+            )
+        console.print(Panel(tabela_refs, border_style="dim white"))
+
+
+def mostrar_tabela_livros():
+    # ... (esta função permanece a mesma)
+    tabela = Table(title="Livros da Bíblia e Abreviações", box=None, padding=(0, 1))
+    tabela.add_column("Nome", style="cyan"); tabela.add_column("Abrev.", style="yellow")
+    tabela.add_column("Nome", style="cyan"); tabela.add_column("Abrev.", style="yellow")
+    metade = (len(LIVROS_E_ABREVIACOES) + 1) // 2
+    for i in range(metade):
+        p1 = LIVROS_E_ABREVIACOES[i]
+        p2 = LIVROS_E_ABREVIACOES[i + metade] if i + metade < len(LIVROS_E_ABREVIACOES) else ("", "")
+        tabela.add_row(p1[0], p1[1], p2[0], p2[1])
+    console.print(tabela)
+
+### FILE: ./app/ui/main_menu.py ###
+# app/ui/main_menu.py
+from rich.panel import Panel
+from rich.text import Text
+from rich.table import Table
+from rich.padding import Padding
+from rich.prompt import Prompt, Confirm
+from app.core.theme import console
+from app.core.config import VERSAO_BIBLIA_PADRAO, VERSOES_BIBLIA_DISPONIVEIS
+from datetime import date, datetime
+from app.core.connections import db_manager
+
+# --- Importações de Models ---
+from app.models.resolution import ResolutionManager
+from app.models.record import RecordManager
+from app.models.fasting import FastingManager
+from app.models.sunday import SundayManager
+from app.models import bible, psaltery, symbols
+
+# --- Importações de Views e Painéis ---
+from app.ui.status_panel import render_status_panel
+from app.ui.resolution_view import prompt_nova_resolucao, exibir_lista_resolucoes, exibir_resolucao_para_revisao
+from app.ui.record_view import prompt_novo_registro, exibir_lista_registros, exibir_detalhes_registro
+from app.ui.bible_view import mostrar_tabela_livros, exibir_passagem
+from app.ui.symbols_view import exibir_simbolos
+from app.ui.psaltery_view import exibir_lista_de_salmos, exibir_detalhes_do_salmo
+from app.reports import metrics
+
+
+# --- Instanciar todos os managers ---
+resolution_manager = ResolutionManager()
+record_manager = RecordManager()
+fasting_manager = FastingManager()
+sunday_manager = SundayManager()
+
+# --- Funções de Ação ---
+
+def acao_meditacao_guiada():
+    console.print(Panel("Meditação Guiada", style="titulo"))
+    choice = Prompt.ask("[prompt]Qual o foco? [1] Na Palavra (Autoexame) [2] Doutrinária (Contemplação)[/prompt]", choices=["1", "2"])
+    # ... (lógica da meditação)
+    console.print("[sucesso]Meditação registrada![/sucesso]")
+
+def acao_jejum_iniciar():
+    active = fasting_manager.get_active_fast()
+    if active:
+        console.print("[erro]Já existe um jejum ativo.[/erro]")
+        return
+    purpose = Prompt.ask("[prompt]Propósito do jejum?[/prompt]")
+    scripture = Prompt.ask("[prompt]Passagem de foco?[/prompt]")
+    fast_id = fasting_manager.start_fast(purpose, scripture)
+    console.print(f"[sucesso]Jejum #{fast_id} iniciado![/sucesso]")
+
+def acao_jejum_concluir():
+    active = fasting_manager.get_active_fast()
+    if not active:
+        console.print("[info]Nenhum jejum ativo.[/info]")
+        return
+    reflection = Prompt.ask(f"[prompt]Reflexão sobre o jejum #{active['id']}:[/prompt]")
+    fasting_manager.finish_fast(active['id'], reflection)
+    console.print(f"[sucesso]Jejum #{active['id']} concluído![/sucesso]")
+
+def acao_domingo_preparar():
+    console.print(Panel("Preparação para o Dia do Senhor", style="titulo"))
+    checks = { "pastor": Confirm.ask("[prompt]Orou pelo pastor?[/prompt]"), "leitura": Confirm.ask("[prompt]Leu a passagem?[/prompt]"), "confissao": Confirm.ask("[prompt]Confessou seus pecados?[/prompt]"), "mundo": Confirm.ask("[prompt]Deixou as preocupações?[/prompt]"), "congregacao": Confirm.ask("[prompt]Orou pela congregação?[/prompt]")}
+    sunday_manager.log_preparation(date.today().isoformat(), checks)
+    console.print("[sucesso]Preparação registrada![/sucesso]")
+
+def acao_domingo_guardar():
+    console.print(Panel("Guardando o Dia do Senhor", style="titulo"))
+    console.print("[info]Use os comandos 'igreja/registros add', 'recursos/salterio', etc.[/info]")
+
+def acao_registros_add():
+    dados = prompt_novo_registro()
+    novo_id = record_manager.add_record(dados)
+    console.print(f"\n[sucesso]Registro #{novo_id} ({dados['category']}) salvo![/sucesso]")
+
+def acao_registros_listar():
+    registros = record_manager.get_all_records()
+    record_id = exibir_lista_registros(registros)
+    if record_id:
+        detalhes = record_manager.get_record_by_id(record_id)
+        if detalhes:
+            exibir_detalhes_registro(str(detalhes.id), detalhes)
+
+def acao_resolucoes_revisar_random():
+    resultado = resolution_manager.get_random_resolution()
+    if not resultado: console.print("[info]Nenhuma resolução para revisar.[/info]"); return
+    exibir_resolucao_para_revisao(str(resultado.id), vars(resultado), "Revisão do Dia")
+    resolution_manager.update_review_stats(str(resultado.id))
+
+def acao_resolucoes_revisar_focada():
+    resultado = resolution_manager.get_least_reviewed_resolution()
+    if not resultado: console.print("[info]Nenhuma resolução para revisar.[/info]"); return
+    exibir_resolucao_para_revisao(str(resultado.id), vars(resultado), "Revisão Focada")
+    resolution_manager.update_review_stats(str(resultado.id))
+    
+def acao_resolucoes_listar():
+    exibir_lista_resolucoes(resolution_manager.get_all_resolutions())
+
+def acao_resolucoes_add():
+    dados = prompt_nova_resolucao()
+    novo_id = resolution_manager.add_resolution(**dados)
+    console.print(f"\n[sucesso]Resolução #{novo_id} registrada![/sucesso]")
+
+def acao_recursos_biblia(session_state):
+    livro = Prompt.ask("[prompt]Livro (ou 'ajuda')[/prompt]")
+    if livro.lower() == "ajuda": mostrar_tabela_livros(); livro = Prompt.ask("[prompt]Livro[/prompt]")
+    cap = Prompt.ask("[prompt]Capítulo[/prompt]")
+    ver = Prompt.ask("[prompt]Versículo (opcional)[/prompt]", default="")
+    try:
+        resultado = bible.obter_passagem(session_state["versao_biblia"], livro, int(cap), int(ver) if ver else None)
+        exibir_passagem(resultado)
+    except (ValueError, TypeError): console.print("[erro]Entrada inválida.[/erro]")
+
+def acao_recursos_simbolos():
+    console.print(Panel("Símbolos de Fé", style="titulo"))
+    doc = Prompt.ask("Documento? [1] CFW [2] CMW [3] BCW", choices=["1", "2", "3"])
+    try:
+        if doc == "1":
+            cap = int(Prompt.ask("Capítulo"))
+            sec_str = Prompt.ask("Seção (opcional)", default="")
+            sec = int(sec_str) if sec_str else None
+            resultado = symbols.obter_simbolo('cfw', cap, sec)
+            exibir_simbolos(resultado, 'cfw')
+        else:
+            tipo = 'cmw' if doc == "2" else 'bcw'
+            num = int(Prompt.ask("Número da pergunta"))
+            resultado = symbols.obter_simbolo(tipo, num)
+            exibir_simbolos(resultado, tipo)
+    except (ValueError, TypeError): console.print("[erro]Entrada inválida.[/erro]")
+
+
+def acao_recursos_salterio():
+    console.print(Panel("Saltério", style="titulo"))
+    num_salmo = Prompt.ask("Número do Salmo")
+    resultados = psaltery.buscar_versoes_salmo(num_salmo)
+    if isinstance(resultados, dict) and "erro" in resultados:
+        console.print(f"[erro]{resultados['erro']}[/erro]"); return
+    while True:
+        idx = exibir_lista_de_salmos(resultados)
+        if idx is not None:
+            exibir_detalhes_do_salmo(resultados[idx])
+            if not Confirm.ask("Ver outra versão?", default=True): break
+        else: break
+    
+def acao_relatorios():
+    console.print(Panel(Text("Relatórios & Métricas", justify="center")))
+    from app.ui.reports_view import display_piety_report, display_resolutions_report
+    # display_piety_report(metrics.get_piety_summary())
+    # display_resolutions_report(metrics.get_resolution_summary())
+    console.print("[info]Módulo de relatórios em construção.[/info]")
+    
+# --- A Nova Estrutura do Menu Hierárquico ---
+MENU_TREE = {
+    "_title": "Menu Principal",
+    "pessoal": {
+        "_title": "Devoção Pessoal",
+        "meditacao": acao_meditacao_guiada,
+        "resolucoes": { "_title": "Minhas Resoluções", "revisar": acao_resolucoes_revisar_random, "focada": acao_resolucoes_revisar_focada, "listar": acao_resolucoes_listar, "add": acao_resolucoes_add },
+        "jejum": { "_title": "Jejum", "iniciar": acao_jejum_iniciar, "concluir": acao_jejum_concluir, },
+        "domingo": { "_title": "Dia do Senhor", "preparar": acao_domingo_preparar, "guardar": acao_domingo_guardar }
+    },
+    "igreja": {
+        "_title": "Atividades da Igreja",
+        "registros": { "_title": "Registros (Sermões, Estudos, etc)", "add": acao_registros_add, "listar": acao_registros_listar }
+    },
+    "recursos": {
+        "_title": "Recursos & Consultas",
+        "biblia": acao_recursos_biblia,
+        "simbolos": acao_recursos_simbolos,
+        "salterio": acao_recursos_salterio
+    },
+    "relatorios": acao_relatorios,
+}
+
+# --- O Loop Interativo Final ---
+
+def display_current_menu(path, current_node):
+    title = current_node.get("_title", "Menu")
+    menu_table = Table(title=f"[Menu: {title}]", box=None, padding=(0, 2))
+    menu_table.add_column("Comando", style="yellow"); menu_table.add_column("Descrição")
+    for key, value in current_node.items():
+        if key.startswith("_"): continue
+        desc = value.get("_title") if isinstance(value, dict) else value.__name__.replace("acao_", "").replace("_", " ").title()
+        menu_table.add_row(key, desc)
+    console.print(Padding(menu_table, (1, 2)))
+
+def iniciar_menu_interativo():
+    session_state = {"versao_biblia": VERSAO_BIBLIA_PADRAO}
+    path = []
+    
+    db_manager.start()
+
+    try:
+        while True:
+            console.clear()
+            console.print(Panel(Text("Cyber-Puritano", justify="center"), border_style="painel_borda"))
+            console.print(render_status_panel())
+
+            current_node = MENU_TREE
+            for p in path: current_node = current_node.get(p, {})
+            display_current_menu(path, current_node)
+
+            prompt_path = "/".join(path)
+            prompt_text = f"[prompt]{prompt_path}>[/prompt] " if path else "[prompt]>[/prompt] "
+            
+            user_input = Prompt.ask(prompt_text, default="").lower().strip()
+            if not user_input: continue
+
+            if user_input.upper() in VERSOES_BIBLIA_DISPONIVEIS:
+                session_state["versao_biblia"] = user_input.upper()
+                console.print(f"Versão da Bíblia alterada para [sucesso]{session_state['versao_biblia']}[/sucesso].")
+                Prompt.ask("\n[info]Pressione Enter para continuar...[/info]")
+                continue
+
+            parts = user_input.split()
+            
+            if parts[0] in ("sair", "exit", "quit", "q"):
+                break
+            if parts[0] in ("voltar", "..", "v"):
+                if path: path.pop()
+                continue
+            if parts[0] in ("ajuda", "menu", "help", "ls"):
+                continue
+
+            node_to_process = MENU_TREE
+            for p in path: node_to_process = node_to_process.get(p, {})
+
+            temp_path = list(path)
+            found_action = False
+            for i, part in enumerate(parts):
+                if part in node_to_process:
+                    target = node_to_process[part]
+                    if isinstance(target, dict):
+                        node_to_process = target
+                        temp_path.append(part)
+                        if i == len(parts) - 1:
+                            path = temp_path
+                    else:
+                        console.clear()
+                        if part == "biblia": target(session_state)
+                        else: target()
+                        Prompt.ask("\n[info]Pressione Enter para continuar...[/info]")
+                        found_action = True
+                        break
+                else:
+                    console.print(f"[erro]Comando '{part}' não encontrado em '/{"/".join(temp_path)}'.[/erro]")
+                    Prompt.ask("\n[info]Pressione Enter para continuar...[/info]")
+                    found_action = True
+                    break
+            
+            if not found_action and path != temp_path:
+                path = temp_path
+
+    except (KeyboardInterrupt, EOFError):
+        pass
+    finally:
+        console.print(Panel("[sucesso]Soli Deo Gloria![/sucesso]"))
+        db_manager.close()
+
+### FILE: ./app/ui/piety_view.py ###
+# app/ui/piety_view.py
+from rich.panel import Panel
+from rich.table import Table
+from rich.prompt import Prompt, Confirm
+from rich.text import Text
+from rich.align import Align
+from rich.console import Group
+from app.core.theme import console
+
+def prompt_registro_diario() -> dict:
+    """Coleta os dados do diário de piedade do usuário."""
+    console.print(Panel("Registro Diário de Piedade", style="titulo"))
+    
+    consistencia = {
+        "leitura_biblica": Confirm.ask("[prompt]Houve leitura bíblica hoje?[/prompt]"),
+        "oracao": Confirm.ask("[prompt]Houve tempo de oração hoje?[/prompt]"),
+        "catecismo": Confirm.ask("[prompt]Houve estudo dos símbolos de fé?[/prompt]")
+    }
+    
+    qualitativo = {
+        "oracao_qualidade": Prompt.ask(
+            "[prompt]Como foi a qualidade da sua oração?[/prompt]",
+            choices=["Distraída", "Normal", "Concentrada", "Vigorosa"],
+            default="Normal"
+        ),
+        "pecado_atitude": Prompt.ask(
+            "[prompt]Qual foi sua atitude perante o pecado?[/prompt]",
+            choices=["Indiferente", "Luta Fraca", "Arrependido", "Vigilante"],
+            default="Arrependido"
+        )
+    }
+    
+    return {"consistencia": consistencia, "qualitativo": qualitativo}
+
+def exibir_registro_dia(data_str: str, dados: dict | None):
+    """Mostra os detalhes de um registro de piedade."""
+    if dados is None:
+        console.print(f"[info]Nenhum registro encontrado para o dia {data_str}.[/info]")
+        return
+    
+    consistencia = dados.get('consistencia', {})
+    qualitativo = dados.get('qualitativo', {})
+
+    t_cons = Table(title="Consistência", box=None, show_header=False)
+    t_cons.add_column(width=25); t_cons.add_column()
+    t_cons.add_row("Leitura Bíblica:", "✅" if consistencia.get('leitura_biblica') else "❌")
+    t_cons.add_row("Oração:", "✅" if consistencia.get('oracao') else "❌")
+    t_cons.add_row("Estudo dos Símbolos:", "✅" if consistencia.get('catecismo') else "❌")
+    
+    t_qual = Table(title="Análise Qualitativa", box=None, show_header=False)
+    t_qual.add_column(width=25); t_qual.add_column()
+    t_qual.add_row("Qualidade da Oração:", qualitativo.get('oracao_qualidade', 'N/A'))
+    t_qual.add_row("Atitude Perante o Pecado:", qualitativo.get('pecado_atitude', 'N/A'))
+
+    console.print(Panel(
+        Group(Align.center(t_cons), Align.center(t_qual)),
+        title=f"Diário de Piedade - {data_str}",
+        border_style="painel_borda"
+    ))
+
+def exibir_analise(analise: dict | None):
+    """Mostra um painel com a análise do período."""
+    if analise is None:
+        console.print("[info]Não há dados suficientes para gerar uma análise.[/info]")
+        return
+
+    total = analise['total_dias_registrados']
+    t_cons = Table(title=f"Análise de Consistência (baseado em {total} dias)")
+    t_cons.add_column("Métrica"); t_cons.add_column("Dias"); t_cons.add_column("Taxa")
+    for metrica, contagem in analise['consistencia'].items():
+        taxa = f"{(contagem/total)*100:.1f}%"
+        t_cons.add_row(metrica.replace("_", " ").title(), str(contagem), taxa)
+
+    console.print(Panel(Align.center(t_cons), title=f"Análise - Últimos {analise['periodo_dias']} dias", border_style="painel_borda"))
+
+### FILE: ./app/ui/psaltery_view.py ###
+# app/ui/psaltery_view.py
+import subprocess
+import shutil
+from rich.panel import Panel
+from rich.text import Text
+from rich.table import Table
+from rich.console import Group
+from rich.prompt import Prompt, Confirm
+from app.core.theme import console
+
+def _tocar_audio_mpv(url: str):
+    """Verifica se o mpv está instalado e executa o áudio do link."""
+    if not shutil.which("mpv"):
+        console.print("[erro]O comando 'mpv' não foi encontrado em seu sistema.[/erro]")
+        return
+    
+    command = ["mpv", "--no-video", url]
+    try:
+        console.print(f"\n[info]Iniciando áudio com mpv...[/info]")
+        subprocess.run(command, check=True)
+    except (subprocess.CalledProcessError, KeyboardInterrupt):
+        console.print("\n[info]Reprodução de áudio finalizada ou interrompida.[/info]")
+
+def exibir_lista_de_salmos(resultados: list) -> int | None:
+    """
+    Exibe uma tabela com a lista de versões encontradas e pede ao usuário
+    para escolher uma. Retorna o índice da escolha na lista.
+    """
+    console.clear()
+    console.print(Panel(f"Versões encontradas para o Salmo {resultados[0]['referencia'].split(' ')[0]}", style="titulo"))
+
+    tabela_resultados = Table(show_header=True, header_style="bold cyan")
+    tabela_resultados.add_column("Opção", justify="center", style="destaque")
+    tabela_resultados.add_column("Referência")
+    tabela_resultados.add_column("Tipo/Melodia")
+
+    opcoes_validas = []
+    for i, versao in enumerate(resultados):
+        opcao = str(i + 1)
+        opcoes_validas.append(opcao)
+        tabela_resultados.add_row(
+            opcao,
+            versao['referencia'],
+            f"{versao.get('tipo', '')} - {versao.get('melodia', '')}"
+        )
+    
+    console.print(tabela_resultados)
+
+    escolha = Prompt.ask(
+        "\n[prompt]Digite o número da versão para ver os detalhes (ou Enter para voltar)[/prompt]",
+        choices=opcoes_validas,
+        show_choices=False,
+        default=""
+    )
+
+    if escolha:
+        return int(escolha) - 1  # Retorna o índice (ex: escolha '1' -> índice 0)
+    return None
+
+def exibir_detalhes_do_salmo(versao: dict):
+    """Exibe o painel de detalhes completo para uma única versão do salmo."""
+    console.clear()
+    
+    info_table = Table(box=None, show_header=False, padding=(0, 1))
+    info_table.add_column(style="prompt", width=15)
+    info_table.add_column()
+    
+    if versao.get('metrica'): info_table.add_row("Métrica:", versao['metrica'])
+    if versao.get('melodia'): info_table.add_row("Melodia:", versao['melodia'])
+
+    letra_panel = Panel(Text(versao.get('letra', 'N/D')), title="Letra")
+    render_group = Group(info_table, letra_panel)
+    titulo = f"Salmo {versao['referencia']} ([destaque]{versao['tipo']}[/destaque])"
+    painel_principal = Panel(render_group, title=titulo, border_style="painel_borda", padding=(1, 2))
+    
+    console.print(painel_principal)
+
+    if video_url := versao.get('video_url'):
+        if Confirm.ask("\n[prompt]Ouvir o áudio desta versão com mpv?[/prompt]", default=False):
+            _tocar_audio_mpv(video_url)
+
+### FILE: ./app/ui/record_view.py ###
+# app/ui/record_view.py
+from datetime import datetime
+from rich.panel import Panel
+from rich.table import Table
+from rich.prompt import Prompt
+from rich.text import Text
+from rich.console import Group
+from app.core.theme import console
+
+def prompt_novo_registro() -> dict:
+    """Coleta os dados de um novo registro de forma categórica."""
+    console.clear()
+    console.print(Panel("Adicionar Novo Registro", style="titulo"))
+    
+    dados = {}
+    cat_choices = {"1": "Sermão", "2": "Estudo Bíblico/EBD", "3": "Reunião de Oração", "4": "Estudo Doutrinário"}
+    cat_choice = Prompt.ask("[prompt]Qual o tipo de registro?[/prompt]", choices=cat_choices.keys(), show_choices=False)
+    dados['category'] = cat_choices[cat_choice]
+    
+    dados['titulo'] = Prompt.ask(f"[prompt]Título ({dados['category']})[/prompt]")
+    
+    author_prompt = "Pregador" if dados['category'] == 'Sermão' else 'Professor/Autor'
+    dados['author'] = Prompt.ask(f"[prompt]{author_prompt}[/prompt]")
+    
+    dados['context'] = Prompt.ask("[prompt]Contexto (Igreja, Conferência, Livro)[/prompt]", default="Igreja Local")
+    dados['data'] = Prompt.ask("[prompt]Data (AAAA-MM-DD)[/prompt]", default=datetime.now().strftime('%Y-%m-%d'))
+    dados['passagem_principal'] = Prompt.ask("[prompt]Passagem(ns) Principal(is)[/prompt]")
+    
+    console.print("\n[prompt]Digite suas anotações. Pressione Esc -> Enter para finalizar.[/prompt]")
+    dados['anotacoes'] = Prompt.get_input(console, multiline=True)
+    
+    console.print("\n[prompt]Digite as aplicações pessoais. Pressione Esc -> Enter para finalizar.[/prompt]")
+    dados['aplicacoes'] = Prompt.get_input(console, multiline=True)
+    
+    return dados
+
+def exibir_lista_registros(registros: list[dict]) -> str | None:
+    """Mostra uma tabela com registros e pergunta qual deles detalhar."""
+    if not registros:
+        console.print("[info]Nenhum registro encontrado.[/info]")
+        return None
+
+    tabela = Table(title="Registros da Igreja")
+    tabela.add_column("ID", style="destaque", justify="center")
+    tabela.add_column("Categoria")
+    tabela.add_column("Data")
+    tabela.add_column("Título")
+    tabela.add_column("Autor")
+
+    opcoes_validas = [str(r['id']) for r in registros]
+    for r in registros:
+        tabela.add_row(str(r['id']), r.get('category', 'N/D'), r.get('data', 'N/D'), r.get('titulo', 'N/D'), r.get('author', 'N/D'))
+    
+    console.print(tabela)
+    
+    return Prompt.ask(
+        "\n[prompt]Digite o ID para ver detalhes (ou Enter para voltar)[/prompt]",
+        choices=opcoes_validas, show_choices=False, default=""
+    )
+
+def exibir_detalhes_registro(record_id: str, dados: dict):
+    """Exibe um painel com todos os detalhes de um registro específico."""
+    console.clear()
+
+    info_basica = Text()
+    info_basica.append(f"Autor/Pregador: ", style="prompt").append(dados.get('author', 'N/D') + "\n")
+    info_basica.append(f"Contexto: ", style="prompt").append(dados.get('context', 'N/D') + "\n")
+    info_basica.append(f"Data: ", style="prompt").append(dados.get('data', 'N/D') + "\n")
+    info_basica.append(f"Passagem Principal: ", style="prompt").append(dados.get('passagem_principal', 'N/D') + "\n")
+
+    p_anotacoes = Panel(Text(dados.get('anotacoes', ''), justify="left"), title="Anotações")
+    p_aplicacoes = Panel(Text(dados.get('aplicacoes', ''), justify="left"), title="Aplicações Pessoais")
+
+    render_group = Group(info_basica, p_anotacoes, p_aplicacoes)
+    painel_geral = Panel(
+        render_group,
+        title=f"{dados.get('category')} #{record_id} - {dados.get('titulo', 'Sem Título')}",
+        border_style="painel_borda"
+    )
+    console.print(painel_geral)
+
+### FILE: ./app/ui/reports_view.py ###
+# app/ui/reports_view.py
+from rich.panel import Panel
+from rich.table import Table
+from rich.console import Group
+from rich.align import Align
+from rich.text import Text
+from app.core.theme import console
+
+def display_piety_report(summary: dict | None):
+    """Exibe o painel de relatório do Diário de Piedade."""
+    if not summary:
+        console.print(Panel("[info]Não há dados suficientes no Diário de Piedade para gerar um relatório.[/info]", title="Relatório de Piedade"))
+        return
+
+    # Tabela de Consistência
+    t_cons = Table(title=f"Consistência (baseado em {summary['total_dias_registrados']} dias)")
+    t_cons.add_column("Métrica", style="cyan")
+    t_cons.add_column("Taxa", style="yellow", justify="right")
+    for metrica, taxa in summary['consistencia'].items():
+        t_cons.add_row(metrica, f"{taxa:.1f}%")
+
+    # Tabela de Qualidade da Oração
+    t_oracao = Table(title="Qualidade da Oração")
+    t_oracao.add_column("Classificação", style="cyan")
+    t_oracao.add_column("Dias", style="yellow", justify="right")
+    for label, count in summary['qualitativo_oracao'].items():
+        t_oracao.add_row(label, str(count))
+        
+    # Tabela de Atitude perante o Pecado
+    t_pecado = Table(title="Atitude Perante o Pecado")
+    t_pecado.add_column("Classificação", style="cyan")
+    t_pecado.add_column("Dias", style="yellow", justify="right")
+    for label, count in summary['qualitativo_pecado'].items():
+        t_pecado.add_row(label, str(count))
+
+    render_group = Group(
+        Align.center(t_cons),
+        Text("---", justify="center"),
+        Align.center(t_oracao),
+        Align.center(t_pecado),
+    )
+    console.print(Panel(
+        render_group,
+        title=f"Relatório de Piedade - Últimos {summary['periodo_dias']} dias",
+        border_style="painel_borda"
+    ))
+
+def display_resolutions_report(summary: dict | None):
+    """Exibe o painel de relatório das Resoluções."""
+    if not summary:
+        console.print(Panel("[info]Nenhuma resolução cadastrada para gerar um relatório.[/info]", title="Relatório de Resoluções"))
+        return
+    
+    # Tabela de Resumo
+    t_resumo = Table(title="Visão Geral")
+    t_resumo.add_column("Métrica", style="cyan")
+    t_resumo.add_column("Valor", style="yellow", justify="right")
+    t_resumo.add_row("Total de Resoluções", str(summary['total_resolucoes']))
+    t_resumo.add_row("Média de Revisões por Resolução", f"{summary['media_revisoes']:.1f}")
+
+    # Tabela de Categorias
+    t_cat = Table(title="Distribuição por Categoria")
+    t_cat.add_column("Categoria", style="cyan")
+    t_cat.add_column("Quantidade", style="yellow", justify="right")
+    for cat, count in summary['dist_categorias'].items():
+        t_cat.add_row(cat, str(count))
+
+    render_group = Group(
+        Align.center(t_resumo),
+        Text("---", justify="center"),
+        Align.center(t_cat),
+    )
+    console.print(Panel(
+        render_group,
+        title="Relatório de Resoluções",
+        border_style="painel_borda"
+    ))
+
+### FILE: ./app/ui/resolution_view.py ###
+# app/ui/resolution_view.py
+from rich.panel import Panel
+from rich.table import Table
+from rich.prompt import Prompt
+from rich.text import Text
+from rich.console import Group
+from app.core.theme import console
+
+def prompt_nova_resolucao() -> dict:
+    """Coleta os dados de uma nova resolução."""
+    console.clear()
+    console.print(Panel("Adicionar Nova Resolução Pessoal", style="titulo"))
+    dados = {}
+    dados['text'] = Prompt.ask("[prompt]Digite o texto da sua resolução[/prompt]")
+    dados['category'] = Prompt.ask("[prompt]Em qual categoria de vida ela se encaixa? (Ex: Piedade, Caráter, Uso do Tempo)[/prompt]", default="Geral")
+    return dados
+
+def exibir_lista_resolucoes(resolutions: list[tuple[str, dict]]):
+    """Mostra uma tabela com todas as resoluções registradas."""
+    if not resolutions:
+        console.print("[info]Nenhuma resolução registrada ainda. Comece adicionando a primeira![/info]")
+        return
+
+    tabela = Table(title="Minhas Resoluções Pessoais")
+    tabela.add_column("ID", style="destaque", justify="center")
+    tabela.add_column("Categoria")
+    tabela.add_column("Texto da Resolução")
+    tabela.add_column("Revisões", justify="center")
+
+    for res_id, dados in resolutions:
+        tabela.add_row(
+            res_id,
+            dados.get('category', 'N/D'),
+            dados.get('text', 'N/D'),
+            str(dados.get('review_count', 0))
+        )
+    
+    console.print(tabela)
+
+# --- FUNÇÃO FALTANTE ADICIONADA AQUI ---
+def exibir_resolucao_para_revisao(res_id: str, dados: dict, titulo: str):
+    """Exibe um painel destacado com uma única resolução para meditação."""
+    
+    info_basica = Text()
+    info_basica.append("Categoria: ", style="prompt").append(dados.get('category', 'N/D') + "\n")
+    info_basica.append("Revisões: ", style="prompt").append(str(dados.get('review_count', 0)))
+
+    texto_resolucao = Text(dados.get('text', ''), justify="center", style="bold")
+    
+    render_group = Group(
+        info_basica,
+        Panel(texto_resolucao, border_style="dim white", padding=(1, 2))
+    )
+
+    painel_geral = Panel(
+        render_group,
+        title=f"{titulo} - Resolução #{res_id}",
+        border_style="painel_borda"
+    )
+    console.print(painel_geral)
+
+### FILE: ./app/ui/status_panel.py ###
+# app/ui/status_panel.py
+from datetime import datetime, date, timedelta
+from rich.panel import Panel
+from rich.table import Table
+from app.core.config import CALENDARIO_SEMANAL
+from app.models.fasting import FastingManager
+
+def render_status_panel() -> Panel:
+    """Cria e retorna o painel de status dinâmico para a tela inicial."""
+    now = datetime.now()
+    today = now.date()
+    weekday = today.weekday() # Monday is 0, Sunday is 6
+
+    status_table = Table(box=None, show_header=False, padding=(0, 1))
+    status_table.add_column(style="prompt")
+    status_table.add_column()
+
+    # 1. Status do Dia
+    day_status = ""
+    if weekday == 6:
+        day_status = "O Dia do Senhor"
+    elif weekday == 5:
+        day_status = "Dia de Preparação"
+    elif weekday in CALENDARIO_SEMANAL:
+        day_status = CALENDARIO_SEMANAL[weekday]
+    
+    if day_status:
+        status_table.add_row("Status do Dia:", day_status)
+
+    # 2. Status Pessoal (Jejum)
+    fm = FastingManager()
+    active_fast = fm.get_active_fast()
+    if active_fast:
+        status_table.add_row("Status Pessoal:", f"[bold red]Em Jejum[/bold red] (Propósito: {active_fast['purpose']})")
+    
+    # 3. Lembretes e Contagem
+    reminder = ""
+    if weekday == 6: # Domingo
+        reminder = "Santifique este dia. (Use: 'domingo guardar')"
+    elif weekday == 5: # Sábado
+        reminder = "Prepare seu coração. (Use: 'domingo preparar')"
+    else:
+        days_to_sunday = (6 - weekday)
+        reminder = f"Faltam {days_to_sunday} dias para o Dia do Senhor."
+
+    if reminder:
+        status_table.add_row("Lembrete:", reminder)
+    
+    title = f"Status ({now.strftime('%d de %B de %Y, %A')})"
+    return Panel(status_table, title=title, border_style="dim white")
+
+### FILE: ./app/ui/symbols_view.py ###
+# app/ui/symbols_view.py
+from rich.panel import Panel
+from rich.markdown import Markdown
+from rich.prompt import Confirm
+from app.core.theme import console
+
+def exibir_simbolos(resultados: list | dict, tipo: str):
+    """Formata e exibe os itens dos Símbolos de Fé."""
+    if isinstance(resultados, dict) and "erro" in resultados:
+        console.print(f"[erro]{resultados['erro']}[/erro]")
+        return
+
+    for item in resultados:
+        if tipo == 'cfw':
+            titulo = f"CFW {item['chapter']}.{item['section']} - {item['title']}"
+            console.print(Panel(Markdown(item['text']), title=titulo, border_style="painel_borda"))
+        else:
+            titulo = f"{tipo.upper()} - Pergunta {item['id']}"
+            pergunta_panel = Panel(f"[prompt]P:[/prompt] {item['question']}", title=titulo, border_style="painel_borda")
+            console.print(pergunta_panel)
+            
+            if Confirm.ask("Ver resposta?", default=True):
+                resposta_panel = Panel(f"[prompt]R:[/prompt] {item['answer']}", border_style="dim white")
+                console.print(resposta_panel)
+
+### FILE: ./main.py ###
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Ponto de entrada principal para a aplicação Cyber-Puritano.
+Este script inicia a interface de linha de comando.
+"""
+from app.cli import cli
+
+if __name__ == '__main__':
+    cli()
+
+### FILE: ./tests/test_metrics.py ###
+# tests/test_metrics.py
+import os
+import sys
+
+# Adiciona o diretório raiz do projeto ao path para que possamos importar de 'app'
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app.reports import metrics
+
+def test_piety_summary_runs_and_returns_dict():
+    """
+    Verifica se a função de resumo de piedade executa sem erros
+    e retorna um dicionário (ou None se não houver dados).
+    """
+    summary = metrics.get_piety_summary()
+    
+    # Se houver dados, o resultado deve ser um dicionário.
+    # Se não houver, deve ser None. O teste aceita ambos.
+    assert isinstance(summary, dict) or summary is None
+    
+    # Se for um dicionário, verifica se contém as chaves esperadas.
+    if isinstance(summary, dict):
+        assert "periodo_dias" in summary
+        assert "consistencia" in summary
+        assert "Leitura Bíblica" in summary["consistencia"]
+
+def test_resolution_summary_runs_and_returns_dict():
+    """
+    Verifica se a função de resumo de resoluções executa sem erros
+    e retorna um dicionário (ou None se não houver dados).
+    """
+    summary = metrics.get_resolution_summary()
+    
+    assert isinstance(summary, dict) or summary is None
+
+    if isinstance(summary, dict):
+        assert "total_resolucoes" in summary
+        assert "media_revisoes" in summary
+        assert "dist_categorias" in summary
+
