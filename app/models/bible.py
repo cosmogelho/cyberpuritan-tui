@@ -13,9 +13,11 @@ def _normalizar_nome_livro(nome_input: str) -> str | None:
 
 def obter_passagem(versao: str, livro: str, capitulo: int, versiculo: int | None = None) -> dict:
     """Busca um capítulo ou versículo e retorna um dicionário com os dados ou um erro."""
-    conn = conectar_biblia(versao)
+    # A conexão agora é única, sem a versão como parâmetro.
+    conn = conectar_biblia()
     if not conn:
-        return {"erro": f"Não foi possível conectar à versão {versao}."}
+        # A mensagem de erro da conexão já é exibida em _criar_conexao
+        return {"erro": f"Não foi possível conectar ao banco de dados da Bíblia."}
 
     try:
         cursor = conn.cursor()
@@ -23,6 +25,7 @@ def obter_passagem(versao: str, livro: str, capitulo: int, versiculo: int | None
         if not nome_canonico:
             return {"erro": f"Livro '{livro}' não encontrado."}
 
+        # A tabela `book` não contém `version`, então a busca do ID do livro permanece a mesma
         cursor.execute("SELECT id FROM book WHERE name = ?", (nome_canonico,))
         resultado_livro = cursor.fetchone()
         if not resultado_livro:
@@ -30,21 +33,24 @@ def obter_passagem(versao: str, livro: str, capitulo: int, versiculo: int | None
         livro_id = resultado_livro['id']
 
         ref = f"{nome_canonico} {capitulo}"
+        versao_upper = versao.upper()
+        
+        # A coluna 'version' foi adicionada à consulta
         if versiculo:
             ref += f":{versiculo}"
-            query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? AND verse = ?"
-            params = (livro_id, capitulo, versiculo)
+            query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? AND verse = ? AND version = ?"
+            params = (livro_id, capitulo, versiculo, versao_upper)
         else:
-            query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? ORDER BY verse"
-            params = (livro_id, capitulo)
+            query = "SELECT verse, text FROM verse WHERE book_id = ? AND chapter = ? AND version = ? ORDER BY verse"
+            params = (livro_id, capitulo, versao_upper)
 
         resultados = cursor.execute(query, params).fetchall()
         if not resultados:
-            return {"erro": f"Passagem não encontrada: {ref}"}
+            return {"erro": f"Passagem não encontrada: {ref} ({versao_upper})"}
 
         return {
             "referencia": ref,
-            "versao": versao.upper(),
+            "versao": versao_upper,
             "versiculos": [{"numero": r['verse'], "texto": r['text']} for r in resultados]
         }
     finally:

@@ -1,11 +1,13 @@
 # app/models/symbols.py
-from app.core.database import conectar_estudo
+# A única mudança é a função de conexão importada e usada
+from app.core.database import conectar_dados_pessoais
 
 def obter_simbolo(tipo: str, numero: int, secao: int | None = None) -> list | dict:
     """Busca um item de um símbolo de fé no banco de dados."""
-    conn = conectar_estudo()
+    # Alterado de conectar_estudo() para conectar_dados_pessoais()
+    conn = conectar_dados_pessoais()
     if not conn:
-        return {"erro": "Não foi possível conectar ao banco de dados de estudo."}
+        return {"erro": "Não foi possível conectar ao banco de dados."}
 
     try:
         cursor = conn.cursor()
@@ -21,7 +23,6 @@ def obter_simbolo(tipo: str, numero: int, secao: int | None = None) -> list | di
         if not resultados:
             return {"erro": "Item não encontrado."}
         
-        # Converte os resultados para uma lista de dicionários para facilitar o uso
         return [dict(row) for row in resultados]
     finally:
         if conn:

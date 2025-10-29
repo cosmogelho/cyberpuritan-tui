@@ -1,50 +1,67 @@
 # app/models/sermon.py
-import json
+import sqlite3
 from datetime import datetime
-from app.core.config import SERMONARIO_FILE_PATH
+from app.core.database import conectar_dados_pessoais
+from app.core.theme import console
 
 class SermonManager:
-    """Gerencia todas as operações de dados relacionadas a sermões."""
-    def __init__(self):
-        self.filepath = SERMONARIO_FILE_PATH
-        self.sermoes = self._carregar_sermoes()
+    """Gerencia todas as operações de dados relacionadas a sermões, usando SQLite."""
 
-    def _carregar_sermoes(self) -> dict:
+    def add_sermon(self, dados_sermon: dict) -> str | None:
+        """Adiciona um novo sermão ao banco de dados e retorna seu ID."""
+        conn = conectar_dados_pessoais()
+        if not conn: return None
+
+        sql = """
+            INSERT INTO sermons (
+                titulo, pregador, data, passagem_principal, outras_passagens,
+                tema, anotacoes, aplicacoes, is_church
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        params = (
+            dados_sermon.get('titulo'),
+            dados_sermon.get('pregador'),
+            dados_sermon.get('data'),
+            dados_sermon.get('passagem_principal'),
+            dados_sermon.get('outras_passagens'),
+            dados_sermon.get('tema'),
+            dados_sermon.get('anotacoes'),
+            dados_sermon.get('aplicacoes'),
+            int(dados_sermon.get('is_church', False))
+        )
+        
         try:
-            with open(self.filepath, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
-
-    def _salvar_sermoes(self):
-        with open(self.filepath, 'w', encoding='utf-8') as f:
-            json.dump(self.sermoes, f, indent=4, ensure_ascii=False, sort_keys=True)
-
-    def _proximo_id(self) -> str:
-        ids_numericos = [int(k) for k in self.sermoes.keys() if k.isdigit()]
-        return str(max(ids_numericos + [0]) + 1)
-
-    def add_sermon(self, dados_sermon: dict) -> str:
-        """Adiciona um novo sermão e retorna seu ID."""
-        novo_id = self._proximo_id()
-        self.sermoes[novo_id] = {
-            **dados_sermon,
-            'adicionado_em': datetime.now().isoformat()
-        }
-        self._salvar_sermoes()
-        return novo_id
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            conn.commit()
+            return str(cursor.lastrowid)
+        except sqlite3.Error as e:
+            console.print(f"[erro]Erro ao adicionar sermão: {e}[/erro]")
+            return None
+        finally:
+            if conn: conn.close()
 
     def get_all_sermoes(self) -> list[tuple[str, dict]]:
         """Retorna uma lista de tuplas (id, dados) de todos os sermões, ordenados por data."""
-        if not self.sermoes:
-            return []
+        conn = conectar_dados_pessoais()
+        if not conn: return []
         
-        # Ordena os itens do dicionário pela chave 'data' em ordem decrescente
-        return sorted(
-            self.sermoes.items(),
-            key=lambda item: item[1].get('data', '1900-01-01'),
-            reverse=True
-        )
+        try:
+            cursor = conn.cursor()
+            rows = cursor.execute("SELECT * FROM sermons ORDER BY data DESC").fetchall()
+            # Converte o resultado para o formato que a view espera: (id, dict_de_dados)
+            return [(str(row['id']), dict(row)) for row in rows]
+        finally:
+            if conn: conn.close()
 
     def get_sermon_by_id(self, sermon_id: str) -> dict | None:
-        return self.sermoes.get(sermon_id)
+        """Busca um sermão completo pelo seu ID."""
+        conn = conectar_dados_pessoais()
+        if not conn: return None
+        
+        try:
+            cursor = conn.cursor()
+            row = cursor.execute("SELECT * FROM sermons WHERE id = ?", (int(sermon_id),)).fetchone()
+            return dict(row) if row else None
+        finally:
+            if conn: conn.close()

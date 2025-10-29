@@ -1,10 +1,13 @@
 import sqlite3
 import os
-from .config import DATA_DIR, DB_ESTUDO_PATH
+from .config import DB_DADOS_PATH, DB_BIBLIA_PATH
 from .theme import console
 
 def _criar_conexao(db_path: str) -> sqlite3.Connection | None:
     """Cria e retorna uma conexão com um banco de dados SQLite."""
+    if not os.path.exists(db_path):
+        console.print(f"[erro]ERRO: Arquivo de banco de dados não encontrado em '{db_path}'.[/erro]")
+        return None
     try:
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -14,15 +17,10 @@ def _criar_conexao(db_path: str) -> sqlite3.Connection | None:
         console.print(f"[info]Detalhes: {e}[/info]")
         return None
 
-def conectar_estudo() -> sqlite3.Connection | None:
-    """Conecta ao banco de dados de estudo."""
-    return _criar_conexao(DB_ESTUDO_PATH)
+def conectar_dados_pessoais() -> sqlite3.Connection | None:
+    """Conecta ao banco de dados com notas, sermões, resoluções, etc."""
+    return _criar_conexao(DB_DADOS_PATH)
 
-def conectar_biblia(versao: str) -> sqlite3.Connection | None:
-    """Conecta a um banco de dados da Bíblia específico."""
-    db_file = f"{versao.upper()}.sqlite"
-    db_path = os.path.join(DATA_DIR, db_file)
-    if not os.path.exists(db_path):
-        console.print(f"[erro]ERRO: Arquivo da Bíblia '{db_file}' não encontrado.[/erro]")
-        return None
-    return _criar_conexao(db_path)
+def conectar_biblia() -> sqlite3.Connection | None:
+    """Conecta ao banco de dados unificado da Bíblia."""
+    return _criar_conexao(DB_BIBLIA_PATH)

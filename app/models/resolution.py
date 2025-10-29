@@ -1,92 +1,78 @@
 # app/models/resolution.py
-import json
-import random
-from datetime import datetime, date
-from pathlib import Path
-
-# Configuração de caminhos
-APP_DIR = Path(__file__).parent.parent
-PROJECT_ROOT = APP_DIR.parent
-DATA_DIR = PROJECT_ROOT / 'data'
-RESOLUTIONS_FILE_PATH = DATA_DIR / 'resolutions.json'
+import sqlite3
+from datetime import datetime
+from app.core.database import conectar_dados_pessoais
+from app.core.theme import console
 
 class ResolutionManager:
-    """Gerencia todas as operações de dados relacionadas às resoluções."""
+    """Gerencia todas as operações de dados relacionadas às resoluções, usando SQLite."""
 
-    def __init__(self):
-        self.filepath = RESOLUTIONS_FILE_PATH
-        self.resolutions = self._carregar_resolucoes()
+    def add_resolution(self, text: str, category: str) -> str | None:
+        """Adiciona uma nova resolução ao banco de dados."""
+        conn = conectar_dados_pessoais()
+        if not conn: return None
 
-    def _carregar_resolucoes(self) -> dict:
-        """Carrega as resoluções do arquivo JSON."""
-        try:
-            with open(self.filepath, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
-
-    def _salvar_resolucoes(self):
-        """Salva o dicionário de resoluções de volta no arquivo JSON."""
-        with open(self.filepath, 'w', encoding='utf-8') as f:
-            json.dump(self.resolutions, f, indent=4, ensure_ascii=False, sort_keys=True)
-
-    def _proximo_id(self) -> str:
-        """Calcula o próximo ID numérico para uma nova resolução."""
-        ids_numericos = [int(k) for k in self.resolutions.keys() if k.isdigit()]
-        return str(max(ids_numericos + [0]) + 1)
-
-    def add_resolution(self, text: str, category: str) -> str:
-        """Adiciona uma nova resolução ao arquivo."""
-        novo_id = self._proximo_id()
         now = datetime.now().isoformat()
-
-        self.resolutions[novo_id] = {
-            "text": text,
-            "category": category,
-            "created_at": now,
-            "last_reviewed_at": None,
-            "review_count": 0
-        }
-        self._salvar_resolucoes()
-        return novo_id
+        sql = """
+            INSERT INTO resolutions (text, category, created_at, last_reviewed_at, review_count)
+            VALUES (?, ?, ?, NULL, 0)
+        """
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, (text, category, now))
+            conn.commit()
+            return str(cursor.lastrowid)
+        except sqlite3.Error as e:
+            console.print(f"[erro]Erro ao adicionar resolução: {e}[/erro]")
+            return None
+        finally:
+            if conn: conn.close()
 
     def get_all_resolutions(self) -> list[tuple[str, dict]]:
         """Retorna uma lista de tuplas (id, dados) de todas as resoluções."""
-        if not self.resolutions:
-            return []
-        return sorted(self.resolutions.items(), key=lambda item: int(item[0]))
+        conn = conectar_dados_pessoais()
+        if not conn: return []
+        
+        try:
+            cursor = conn.cursor()
+            rows = cursor.execute("SELECT * FROM resolutions ORDER BY id").fetchall()
+            # Converte o resultado para o formato que a view espera: (id, dict_de_dados)
+            return [(str(row['id']), dict(row)) for row in rows]
+        finally:
+            if conn: conn.close()
 
     def update_review_stats(self, res_id: str):
         """Atualiza os metadados de uma resolução após ela ser revisada."""
-        if res_id in self.resolutions:
-            self.resolutions[res_id]['review_count'] += 1
-            self.resolutions[res_id]['last_reviewed_at'] = datetime.now().isoformat()
-            self._salvar_resolucoes()
+        conn = conectar_dados_pessoais()
+        if not conn: return
+
+        now = datetime.now().isoformat()
+        sql = "UPDATE resolutions SET review_count = review_count + 1, last_reviewed_at = ? WHERE id = ?"
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, (now, int(res_id)))
+            conn.commit()
+        finally:
+            if conn: conn.close()
+    
+    def _get_one_resolution(self, query: str) -> tuple[str, dict] | None:
+        """Função auxiliar para buscar uma única resolução."""
+        conn = conectar_dados_pessoais()
+        if not conn: return None
+
+        try:
+            cursor = conn.cursor()
+            row = cursor.execute(query).fetchone()
+            if row:
+                return str(row['id']), dict(row)
+            return None
+        finally:
+            if conn: conn.close()
 
     def get_random_resolution(self) -> tuple[str, dict] | None:
         """Retorna uma tupla (id, dados) de uma resolução aleatória."""
-        if not self.resolutions:
-            return None
-        
-        random_id = random.choice(list(self.resolutions.keys()))
-        return random_id, self.resolutions[random_id]
+        return self._get_one_resolution("SELECT * FROM resolutions ORDER BY RANDOM() LIMIT 1")
 
     def get_least_reviewed_resolution(self) -> tuple[str, dict] | None:
         """Encontra e retorna a resolução que foi menos revisada ou a mais antiga."""
-        if not self.resolutions:
-            return None
-
-        def sort_key(item):
-            res_id, data = item
-            review_count = data.get('review_count', 0)
-            
-            last_reviewed_str = data.get('last_reviewed_at')
-            if last_reviewed_str is None:
-                last_reviewed_date = date.min
-            else:
-                last_reviewed_date = date.fromisoformat(last_reviewed_str.split('T')[0])
-                
-            return (review_count, last_reviewed_date)
-
-        sorted_resolutions = sorted(self.resolutions.items(), key=sort_key)
-        return sorted_resolutions[0]
+        return self._get_one_resolution("SELECT * FROM resolutions ORDER BY review_count ASC, last_reviewed_at ASC NULLS FIRST LIMIT 1")

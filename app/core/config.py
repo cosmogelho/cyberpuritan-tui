@@ -6,13 +6,13 @@ PROJECT_ROOT = os.path.dirname(APP_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 
 # --- Arquivos de Dados ---
-DB_ESTUDO_PATH = os.path.join(DATA_DIR, 'meu_estudo.db')
-SERMONARIO_FILE_PATH = os.path.join(DATA_DIR, 'sermonario.json')
-PIEDADE_METRICAS_FILE_PATH = os.path.join(DATA_DIR, 'piedade_metricas.json')
+# Apontando para os novos bancos de dados centralizados
+DB_BIBLIA_PATH = os.path.join(DATA_DIR, 'Biblia.sqlite')
+DB_DADOS_PATH = os.path.join(DATA_DIR, 'dados.db')
 
 # --- Configurações da Aplicação ---
 VERSAO_BIBLIA_PADRAO = "NAA"
-VERSOES_BIBLIA_DISPONIVEIS = ["NAA", "ARA", "NVI"]
+VERSOES_BIBLIA_DISPONIVEIS = ["NAA", "ARA", "NVI"] # Manter para o seletor da UI
 
 # --- Constantes da Bíblia ---
 LIVROS_E_ABREVIACOES = [

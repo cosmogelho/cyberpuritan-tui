@@ -1,12 +1,14 @@
 # app/models/study.py
 import sqlite3
 from datetime import datetime
-from app.core.database import conectar_estudo
+# A única mudança é a função de conexão importada e usada
+from app.core.database import conectar_dados_pessoais
+from app.core.theme import console # Importar o console para padronizar logs de erro
 
 class StudyManager:
     def __init__(self):
-        # A conexão é mantida aberta para a vida do objeto para eficiência
-        self.conn = conectar_estudo()
+        # Alterado de conectar_estudo() para conectar_dados_pessoais()
+        self.conn = conectar_dados_pessoais()
         if self.conn:
             self._initialize_db()
 
@@ -26,8 +28,8 @@ class StudyManager:
             """)
             self.conn.commit()
         except sqlite3.Error as e:
-            # Usamos print em vez de console aqui, pois é um erro de baixo nível
-            print(f"Erro ao inicializar o banco de dados de estudos: {e}")
+            # Corrigido de print() para console.print para manter o padrão
+            console.print(f"[erro]Erro ao inicializar o banco de dados de estudos: {e}[/erro]")
 
     def add_note(self, title: str, content: str, tags: str) -> int | None:
         """Adiciona uma nova anotação e retorna seu ID."""
@@ -39,7 +41,7 @@ class StudyManager:
             self.conn.commit()
             return cursor.lastrowid
         except sqlite3.Error as e:
-            print(f"Erro ao adicionar anotação: {e}")
+            console.print(f"[erro]Erro ao adicionar anotação: {e}[/erro]")
             return None
 
     def get_all_notes(self) -> list[dict] | None:
@@ -50,7 +52,7 @@ class StudyManager:
             notes = cursor.fetchall()
             return [dict(row) for row in notes]
         except sqlite3.Error as e:
-            print(f"Erro ao buscar anotações: {e}")
+            console.print(f"[erro]Erro ao buscar anotações: {e}[/erro]")
             return None
 
     def get_note_by_id(self, note_id: int) -> dict | None:
@@ -61,7 +63,7 @@ class StudyManager:
             note = cursor.fetchone()
             return dict(note) if note else None
         except sqlite3.Error as e:
-            print(f"Erro ao buscar anotação por ID: {e}")
+            console.print(f"[erro]Erro ao buscar anotação por ID: {e}[/erro]")
             return None
 
     def __del__(self):
