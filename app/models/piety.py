@@ -1,25 +1,25 @@
 # app/models/piety.py
 import sqlite3
 from datetime import date, timedelta
-from app.core.connections import db_manager
+from app.core.db import get_data_conn
 from app.core.theme import console
 
 class PiedadeManager:
     def registrar_dia(self, data_str: str, dados: dict):
-        if not db_manager.dados_conn: return
+        conn = get_data_conn()
         consistencia = dados.get('consistencia', {})
         qualitativo = dados.get('qualitativo', {})
         sql = """INSERT OR REPLACE INTO piety (date, leitura_biblica, oracao, catecismo, oracao_qualidade, pecado_atitude) VALUES (?, ?, ?, ?, ?, ?)"""
         params = (data_str, int(consistencia.get('leitura_biblica', False)), int(consistencia.get('oracao', False)), int(consistencia.get('catecismo', False)), qualitativo.get('oracao_qualidade'), qualitativo.get('pecado_atitude'))
         try:
-            cursor = db_manager.dados_conn.cursor()
+            cursor = conn.cursor()
             cursor.execute(sql, params)
-            db_manager.dados_conn.commit()
+            conn.commit()
         except sqlite3.Error as e:
             console.print(f"[erro]Erro ao registrar o dia: {e}[/erro]")
+
     def get_registro_dia(self, data_str: str) -> dict | None:
-        if not db_manager.dados_conn: return None
-        cursor = db_manager.dados_conn.cursor()
+        cursor = get_data_conn().cursor()
         cursor.execute("SELECT * FROM piety WHERE date = ?", (data_str,))
         row = cursor.fetchone()
         if not row: return None
@@ -27,10 +27,10 @@ class PiedadeManager:
             "consistencia": {"leitura_biblica": bool(row['leitura_biblica']), "oracao": bool(row['oracao']), "catecismo": bool(row['catecismo'])},
             "qualitativo": {"oracao_qualidade": row['oracao_qualidade'], "pecado_atitude": row['pecado_atitude']}
         }
+
     def gerar_analise(self, periodo_dias: int = 30) -> dict | None:
-        if not db_manager.dados_conn: return None
         hoje, data_inicio = date.today(), date.today() - timedelta(days=periodo_dias)
-        cursor = db_manager.dados_conn.cursor()
+        cursor = get_data_conn().cursor()
         query = "SELECT * FROM piety WHERE date BETWEEN ? AND ?"
         registros_periodo = cursor.execute(query, (data_inicio.isoformat(), hoje.isoformat())).fetchall()
         if not registros_periodo: return None
