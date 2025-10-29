@@ -1,12 +1,12 @@
 # app/reports/metrics.py
 from datetime import date, timedelta
-from app.core.database import conectar_dados_pessoais
+from app.core.db import get_data_conn # CORRIGIDO: Importa a função correta
 
 def get_piety_summary(periodo_dias: int = 30) -> dict | None:
     """Busca e calcula um resumo de consistência do diário de piedade."""
     hoje = date.today()
     data_inicio = hoje - timedelta(days=periodo_dias)
-    conn = conectar_dados_pessoais()
+    conn = get_data_conn() # CORRIGIDO: Usa a função de conexão correta
     if not conn: return None
 
     try:
@@ -48,12 +48,15 @@ def get_piety_summary(periodo_dias: int = 30) -> dict | None:
             "qualitativo_oracao": {row['oracao_qualidade']: row['count'] for row in oracao_dist},
             "qualitativo_pecado": {row['pecado_atitude']: row['count'] for row in pecado_dist},
         }
-    finally:
-        if conn: conn.close()
+    except Exception:
+        # Em caso de erro, retorna None para não quebrar a aplicação.
+        return None
+    # REMOVIDO: O bloco 'finally' que fechava a conexão foi removido.
+
 
 def get_resolution_summary() -> dict | None:
     """Busca e calcula um resumo das resoluções pessoais."""
-    conn = conectar_dados_pessoais()
+    conn = get_data_conn() # CORRIGIDO: Usa a função de conexão correta
     if not conn: return None
 
     try:
@@ -70,5 +73,6 @@ def get_resolution_summary() -> dict | None:
             "media_revisoes": avg_reviews or 0,
             "dist_categorias": {row['category']: row['count'] for row in categories}
         }
-    finally:
-        if conn: conn.close()
+    except Exception:
+        return None
+    # REMOVIDO: O bloco 'finally' que fechava a conexão foi removido.

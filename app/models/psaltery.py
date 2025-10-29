@@ -1,11 +1,9 @@
 # app/models/psaltery.py
-# A única mudança é a função de conexão importada e usada
-from app.core.database import conectar_dados_pessoais
+from app.core.db import get_data_conn # CORRIGIDO: Importa a função correta
 
 def buscar_versoes_salmo(numero_salmo: str) -> list | dict:
     """Busca no banco de dados todas as versões disponíveis para um salmo."""
-    # Alterado de conectar_estudo() para conectar_dados_pessoais()
-    conn = conectar_dados_pessoais()
+    conn = get_data_conn() # CORRIGIDO: Usa a função de conexão correta
     if not conn:
         return {"erro": "Não foi possível conectar ao banco de dados."}
         
@@ -25,6 +23,4 @@ def buscar_versoes_salmo(numero_salmo: str) -> list | dict:
         return {"erro": f"O número do salmo '{numero_salmo}' é inválido. Por favor, digite apenas números."}
     except Exception as e:
         return {"erro": f"Ocorreu um erro ao buscar o salmo: {e}"}
-    finally:
-        if conn:
-            conn.close()
+    # REMOVIDO: O bloco 'finally' que fechava a conexão foi removido.
