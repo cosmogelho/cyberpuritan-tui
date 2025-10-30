@@ -1,16 +1,14 @@
+# app/core/theme.py
 from rich.console import Console
 from rich.theme import Theme
 
 custom_theme = Theme({
-    "titulo": "bold cyan",
-    "subtitulo": "dim white",
-    "prompt": "bold green",
-    "referencia": "yellow",
+    "info": "cyan",
+    "warning": "yellow",
     "erro": "bold red",
-    "sucesso": "bold green",
-    "info": "dim white",
-    "painel_borda": "cyan",
-    "destaque": "bold magenta",
+    "titulo": "bold cyan",
+    "prompt": "bold green",
+    "ref": "italic yellow"
 })
 
 console = Console(theme=custom_theme)

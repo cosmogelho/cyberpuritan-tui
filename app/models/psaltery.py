@@ -1,11 +1,15 @@
 # app/models/psaltery.py
 from app.core.db import get_db_connection
 
-def get_psalm_by_id(psalm_id: int):
-    """Busca um salmo pelo seu número/ID."""
+def get_psalm_by_reference(reference: str):
+    """
+    Busca um salmo pela sua referência exata (ex: '1A', '23', '99C').
+    Esta é a forma mais precisa de buscar.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM salterio WHERE id = ?", (psalm_id,))
+    # Usamos a coluna 'referencia' que contém valores como '15A', '15B', etc.
+    cursor.execute("SELECT * FROM salterio WHERE referencia = ?", (reference,))
     psalm = cursor.fetchone()
     conn.close()
     return psalm

@@ -2,9 +2,8 @@
 import click
 from rich.prompt import Prompt
 from app.core.theme import console
-# A linha abaixo foi ajustada para um import relativo (note o ".")
 from .command_parser import parse 
-from app.ui.actions import COMMAND_MAP, SESSION_STATE
+from app.ui.actions import COMMAND_MAP, SESSION_STATE # Importa do novo local
 
 def run_interactive_mode():
     """Inicia o loop principal da aplicação no modo interativo."""
@@ -14,9 +13,9 @@ def run_interactive_mode():
 
     while True:
         try:
-            console.print(render_status_panel())
+            # console.print(render_status_panel()) # Se você tiver um painel de status
             versao_biblia = SESSION_STATE.get('versao_biblia', 'NAA')
-            raw_input = Prompt.ask(f"[cyan]({versao_biblia})[/cyan] [bold green]>[/bold green]")
+            raw_input = Prompt.ask(f"[cyan]({versao_biblia})[/cyan] [prompt]>[/prompt]")
             
             parsed = parse(raw_input)
             if not parsed: continue
@@ -33,7 +32,6 @@ def run_interactive_mode():
             break
         except Exception as e:
             console.print(f"[bold red]Ocorreu um erro inesperado:[/bold red] {e}")
-            console.print("[info]Por favor, reporte este erro se ele persistir.[/info]")
 
     console.print("\n[bold]Soli Deo Gloria![/bold]")
 
