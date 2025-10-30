@@ -6,6 +6,7 @@ DEFAULT_ALIASES = {
     "b": "bible",        # Bíblia
     "s": "symbols",      # Símbolos de Fé
     "p": "psaltery",     # Saltério
+    "rep": "reports",
     "h": "help",
     "q": "exit",
     "cls": "clear"

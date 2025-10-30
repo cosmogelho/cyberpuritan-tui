@@ -1,78 +1,54 @@
 # app/reports/metrics.py
-from datetime import date, timedelta
-from app.core.db import get_data_conn # CORRIGIDO: Importa a função correta
+from collections import Counter
+from datetime import datetime, timedelta
+from rich.panel import Panel
+from rich.table import Table
+from app.core.theme import console
+from app.models import journal_model, action_item_model
 
-def get_piety_summary(periodo_dias: int = 30) -> dict | None:
-    """Busca e calcula um resumo de consistência do diário de piedade."""
-    hoje = date.today()
-    data_inicio = hoje - timedelta(days=periodo_dias)
-    conn = get_data_conn() # CORRIGIDO: Usa a função de conexão correta
-    if not conn: return None
+def generate_weekly_report():
+    """
+    Gera e exibe um relatório de métricas devocionais da última semana.
+    """
+    console.print(Panel("[bold cyan]Relatório Devocional Semanal[/bold cyan]", expand=False))
 
-    try:
-        cursor = conn.cursor()
-        query = """
-            SELECT
-                COUNT(*) as total_dias,
-                AVG(leitura_biblica) as avg_leitura,
-                AVG(oracao) as avg_oracao,
-                AVG(catecismo) as avg_catecismo
-            FROM piety
-            WHERE date BETWEEN ? AND ?
-        """
-        params = (data_inicio.isoformat(), hoje.isoformat())
-        summary = cursor.execute(query, params).fetchone()
+    # 1. Análise do Diário (Journal)
+    entries = journal_model.get_all_entries()
+    today = datetime.now()
+    one_week_ago = today - timedelta(days=7)
+    
+    recent_entries = [e for e in entries if datetime.strptime(e['entry_date'], '%Y-%m-%d %H:%M:%S') > one_week_ago]
+    
+    console.print(f"\n[info]Diário:[/info]")
+    console.print(f" - Você escreveu [bold green]{len(recent_entries)}[/bold green] entradas nos últimos 7 dias.")
 
-        if not summary or summary['total_dias'] == 0:
-            return None
-        
-        # Busca as distribuições qualitativas
-        oracao_dist = cursor.execute(
-            "SELECT oracao_qualidade, COUNT(*) as count FROM piety WHERE date BETWEEN ? AND ? GROUP BY oracao_qualidade",
-            params
-        ).fetchall()
-        
-        pecado_dist = cursor.execute(
-            "SELECT pecado_atitude, COUNT(*) as count FROM piety WHERE date BETWEEN ? AND ? GROUP BY pecado_atitude",
-            params
-        ).fetchall()
+    # Análise de Tags
+    all_tags = []
+    for entry in recent_entries:
+        tags = [tag.strip() for tag in entry['tags'].split(',') if tag.strip()]
+        all_tags.extend(tags)
+    
+    if all_tags:
+        tag_counts = Counter(all_tags)
+        most_common_tags = tag_counts.most_common(3)
+        tags_str = ", ".join([f"'{tag}' ({count}x)" for tag, count in most_common_tags])
+        console.print(f" - Suas tags mais comuns na semana foram: [yellow]{tags_str}[/yellow].")
 
-        return {
-            "periodo_dias": periodo_dias,
-            "total_dias_registrados": summary['total_dias'],
-            "consistencia": {
-                "Leitura Bíblica": (summary['avg_leitura'] or 0) * 100,
-                "Oração": (summary['avg_oracao'] or 0) * 100,
-                "Estudo dos Símbolos": (summary['avg_catecismo'] or 0) * 100,
-            },
-            "qualitativo_oracao": {row['oracao_qualidade']: row['count'] for row in oracao_dist},
-            "qualitativo_pecado": {row['pecado_atitude']: row['count'] for row in pecado_dist},
-        }
-    except Exception:
-        # Em caso de erro, retorna None para não quebrar a aplicação.
-        return None
-    # REMOVIDO: O bloco 'finally' que fechava a conexão foi removido.
+    # 2. Análise das Ações (Actions)
+    console.print(f"\n[info]Ações:[/info]")
+    
+    # Resoluções
+    resolutions = action_item_model.get_items('Resolução')
+    active_resolutions = [r for r in resolutions if r['status'] == 'Ativo']
+    console.print(f" - Você tem [bold green]{len(active_resolutions)}[/bold green] resoluções ativas.")
+    
+    # Pedidos de Oração
+    prayers = action_item_model.get_items('Pedido de Oração')
+    active_prayers = [p for p in prayers if p['status'] == 'Ativo']
+    answered_prayers_total = len(prayers) - len(active_prayers)
+    
+    console.print(f" - Você tem [bold green]{len(active_prayers)}[/bold green] pedidos de oração ativos.")
+    if answered_prayers_total > 0:
+        console.print(f" - Deus já respondeu a [bold green]{answered_prayers_total}[/bold green] orações registradas!")
 
-
-def get_resolution_summary() -> dict | None:
-    """Busca e calcula um resumo das resoluções pessoais."""
-    conn = get_data_conn() # CORRIGIDO: Usa a função de conexão correta
-    if not conn: return None
-
-    try:
-        cursor = conn.cursor()
-        total = cursor.execute("SELECT COUNT(*) FROM resolutions").fetchone()[0]
-        if total == 0:
-            return None
-
-        avg_reviews = cursor.execute("SELECT AVG(review_count) FROM resolutions").fetchone()[0]
-        categories = cursor.execute("SELECT category, COUNT(*) as count FROM resolutions GROUP BY category").fetchall()
-
-        return {
-            "total_resolucoes": total,
-            "media_revisoes": avg_reviews or 0,
-            "dist_categorias": {row['category']: row['count'] for row in categories}
-        }
-    except Exception:
-        return None
-    # REMOVIDO: O bloco 'finally' que fechava a conexão foi removido.
+    console.print("\n[italic]Continue perseverando na piedade, pois \"o exercício físico para pouco é proveitoso, mas a piedade para tudo é proveitosa\" (1 Timóteo 4:8).[/italic]")

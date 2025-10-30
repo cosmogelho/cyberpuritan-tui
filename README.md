@@ -1,81 +1,42 @@
 # Cyber-Puritano: Ferramenta Devocional Pessoal
 
-Esta é uma ferramenta de linha de comando (CLI) para auxiliar na disciplina e registro da vida devocional, inspirada nas práticas puritanas e reformadas.
-
-## Estrutura do Projeto
-
-O projeto está organizado da seguinte forma:
-
--   `main.py`: Ponto de entrada da aplicação.
--   `app/`: Contém todo o código fonte da aplicação.
-    -   `app/cli.py`: Define os comandos da CLI usando `click`.
-    -   `app/core/`: Módulos centrais (configuração, conexão com BD, temas).
-    -   `app/models/`: Camada de acesso a dados. Cada arquivo é responsável por interagir com uma tabela específica do banco de dados.
-    -   `app/reports/`: Lógica para gerar métricas e relatórios a partir dos dados.
-    -   `app/ui/`: Lógica da interface do usuário (menus, visualizações, prompts).
--   `data/`: Contém os bancos de dados SQLite.
-    -   `Biblia.sqlite`: Contém os textos bíblicos de múltiplas versões.
-    -   `dados.db`: Contém todos os dados pessoais do usuário (diário, sermões, notas, etc.).
--   `tests/`: Contém os testes automatizados para garantir a qualidade do código.
+Esta é uma ferramenta de linha de comando (CLI) para auxiliar na disciplina e registro da vida devocional, inspirada nas práticas puritanas e reformadas, com foco na simplicidade e na reflexão textual.
 
 ## Como Usar
 
-1.  **Executar a aplicação em modo interativo:**
+1.  **Instalar as dependências:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2.  **Executar a aplicação em modo interativo:**
     ```bash
     python main.py
     ```
 
-2.  **Executar os testes:**
-    ```bash
-    pytest
-    ```
+3.  **Dentro da aplicação, use os seguintes comandos:**
+
+| Comando   | Alias | Exemplo de Uso                                 | Descrição                                         |
+|-----------|-------|------------------------------------------------|-----------------------------------------------------|
+| `journal` | `j`   | `j add`, `j view`, `j find sermão`             | Gerencia seu diário espiritual unificado.           |
+| `actions` | `a`   | `a add res ...`, `a view ora`                  | Gerencia resoluções e pedidos de oração.          |
+| `notes`   | `n`   | `n add`, `n view`, `n read 1`                  | Seu "Commonplace Book" para notas de estudo.        |
+| `psaltery`| `p`   | `p 15A`, `p 23 play`, `p list`                 | Consulta o Saltério, com música e metadados.      |
+| `bible`   | `b`   | `b jo 3:16-18`                                 | Lê passagens da Bíblia (versão NAA).              |
+| `symbols` | `s`   | `s cfw 1.1`, `s cmw 1`                         | Consulta os Símbolos de Fé de Westminster.        |
+| `reports` | `rep` | `rep`                                          | Mostra um resumo da sua atividade na última semana. |
+| `help`    | `h`   | `h`                                            | Mostra esta tabela de ajuda.                      |
+| `clear`   | `cls` | `cls`                                          | Limpa a tela do terminal.                         |
+| `exit`    | `q`   | `q`                                            | Encerra a aplicação.                              |
 
 ## Estrutura do Banco de Dados (`dados.db`)
 
-```sql
--- Tabela de Diário de Piedade
-CREATE TABLE piety (
-    date TEXT PRIMARY KEY,
-    leitura_biblica INTEGER,
-    oracao INTEGER,
-    catecismo INTEGER,
-    oracao_qualidade TEXT,
-    pecado_atitude TEXT
-);
+A aplicação usa uma estrutura de banco de dados simplificada e poderosa:
 
--- Tabela de Resoluções Pessoais
-CREATE TABLE resolutions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    text TEXT NOT NULL,
-    category TEXT,
-    created_at TEXT,
-    last_reviewed_at TEXT,
-    review_count INTEGER DEFAULT 0
-);
+-   `journal`: Armazena todas as entradas cronológicas (diário, meditações, sermões) em formato de texto livre com tags.
+-   `action_items`: Armazena itens que requerem acompanhamento, como resoluções (`Resolução`) e pedidos de oração (`Pedido de Oração`).
+-   `notes`: Armazena notas de estudo temáticas e mais longas, funcionando como um "Commonplace Book".
+-   Tabelas de consulta: `salterio`, `cfw_articles`, `cmw`, `bcw`.
 
--- Tabela de Anotações de Sermões
-CREATE TABLE sermons (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    titulo TEXT,
-    pregador TEXT,
-    data TEXT,
-    passagem_principal TEXT,
-    outras_passagens TEXT,
-    tema TEXT,
-    anotacoes TEXT,
-    aplicacoes TEXT,
-    is_church INTEGER DEFAULT 0
-);
-
--- Tabela de Anotações de Estudo
-CREATE TABLE notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content TEXT,
-    tags TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
--- Demais tabelas (salterio, cfw_articles, cmw, bcw, etc.)
-```
+---
+**Soli Deo Gloria**

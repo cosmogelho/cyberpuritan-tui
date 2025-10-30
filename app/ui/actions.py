@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.markup import escape  # <- ADIÇÃO CRÍTICA PARA A CORREÇÃO
 from app.core.theme import console
+from app.reports import metrics
 from app.models import journal_model, action_item_model, notes_model, bible, symbols, psaltery
 
 SESSION_STATE = {'versao_biblia': 'NAA'}
@@ -37,6 +38,7 @@ def _handle_help(args):
     table.add_row("bible", "b", "Busca passagens bíblicas. Ex: 'b jo 3:16-18'.")
     table.add_row("symbols", "s", "Consulta Símbolos de Fé. Ex: 's cfw 1.1', 's cmw 10'.")
     table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play|all]', 'p list'.")
+    table.add_row("reports", "rep", "Exibe um relatório de métricas da última semana.")
     table.add_row("clear", "cls", "Limpa a tela.")
     table.add_row("exit", "q", "Sai da aplicação.")
     console.print(table)
@@ -310,5 +312,6 @@ COMMAND_MAP = {
     "bible": _handle_bible,
     "symbols": _handle_symbols,
     "psaltery": _handle_psaltery,
+    "reports": lambda args: metrics.generate_weekly_report(),
     "clear": lambda args: _clear_screen()
 }
