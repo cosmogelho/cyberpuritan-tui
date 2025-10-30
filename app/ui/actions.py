@@ -6,6 +6,7 @@ from datetime import datetime
 from rich.panel import Panel
 from rich.table import Table
 from rich.markup import escape
+from natsort import natsorted
 from app.core.theme import console
 from app.models import journal_model, action_item_model, notes_model, bible, symbols, psaltery
 from app.core.config import DATA_DIR
@@ -60,7 +61,6 @@ def _handle_help(args):
     table.add_row("exit", "q", "Sai da aplicação.")
     console.print(table)
 
-# ... (As funções _handle_journal, _handle_actions, _handle_notes, _handle_bible, _handle_symbols permanecem iguais) ...
 def _handle_journal(args):
     if not args or args[0] not in ['add', 'view', 'find']: console.print("[erro]Uso: journal [add|view|find <tag>]"); return
     sub_cmd = args[0]
@@ -180,15 +180,34 @@ def _handle_symbols(args):
     else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
 
 # ============================================================================
-# (MODIFICADO) HANDLER DO SALTÉRIO COM LÓGICA DE REPRODUÇÃO INTELIGENTE
+# (MODIFICADO) HANDLER DO SALTÉRIO COM LÓGICA DE REPRODUÇÃO E LISTAGEM
 # ============================================================================
 def _handle_psaltery(args):
     if not args or args[0].lower() == 'list':
-        refs = psaltery.get_all_psalms_references()
-        table = Table(title="Saltério - Todos os Salmos")
+        all_refs_data = psaltery.get_all_psalms_references()
+        
+        # Extrai apenas as strings de referência para ordenação
+        references_list = [ref['referencia'] for ref in all_refs_data]
+        
+        # Usa natsorted para uma ordenação natural e correta
+        sorted_references = natsorted(references_list)
+
+        table = Table(title="Saltério - Todos os Salmos", show_header=False, box=None, padding=(0, 2))
         table.add_column("Referência", style="cyan", no_wrap=True)
-        table.add_column("Métrica/Melodia", style="yellow")
-        for ref in refs: table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
+        
+        last_psalm_num = None
+        for ref in sorted_references:
+            # Extrai o número do salmo para agrupar as versões (ex: '134' de '134B')
+            match = re.match(r'^\d+', ref)
+            current_psalm_num = match.group(0) if match else None
+
+            # Adiciona uma linha de separação quando o número do salmo muda
+            if last_psalm_num is not None and current_psalm_num != last_psalm_num:
+                table.add_row("─" * 20, style="dim white")
+
+            table.add_row(ref)
+            last_psalm_num = current_psalm_num
+            
         console.print(table)
         return
 
