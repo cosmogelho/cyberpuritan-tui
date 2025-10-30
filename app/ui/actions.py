@@ -6,17 +6,13 @@ from datetime import datetime
 from rich.panel import Panel
 from rich.table import Table
 from rich.markup import escape
-
-# Importa DATA_DIR para construir caminhos de arquivo corretamente
-from app.core.config import DATA_DIR
 from app.core.theme import console
 from app.models import journal_model, action_item_model, notes_model, bible, symbols, psaltery
-# A linha abaixo foi movida do __init__.py para cá para evitar dependência circular
+from app.core.config import DATA_DIR
 from app.reports import metrics
 
 SESSION_STATE = {'versao_biblia': 'NAA'}
 
-# DICIONÁRIO DE ABREVIAÇÕES BÍBLICAS PARA BUSCA PRECISA
 BIBLE_ABBREVIATIONS = {
     'gn': 'Gênesis', 'ex': 'Êxodo', 'lv': 'Levítico', 'nm': 'Números', 'dt': 'Deuteronômio',
     'js': 'Josué', 'jz': 'Juízes', 'rt': 'Rute', '1sm': '1 Samuel', '2sm': '2 Samuel',
@@ -25,64 +21,46 @@ BIBLE_ABBREVIATIONS = {
     'ec': 'Eclesiastes', 'ct': 'Cantares', 'is': 'Isaías', 'jr': 'Jeremias', 'lm': 'Lamentações',
     'ez': 'Ezequiel', 'dn': 'Daniel', 'os': 'Oséias', 'jl': 'Joel', 'am': 'Amós', 'ob': 'Obadias',
     'jn': 'Jonas', 'mq': 'Miquéias', 'na': 'Naum', 'hc': 'Habacuque', 'sf': 'Sofonias', 'ag': 'Ageu',
-    'zc': 'Zacarias', 'ml': 'Malaquias',
-    'mt': 'Mateus', 'mc': 'Marcos', 'lc': 'Lucas', 'jo': 'João', 'at': 'Atos', 'rm': 'Romanos',
-    '1co': '1 Coríntios', '2co': '2 Coríntios', 'gl': 'Gálatas', 'ef': 'Efésios', 'fp': 'Filipenses',
-    'cl': 'Colossenses', '1ts': '1 Tessalonicenses', '2ts': '2 Tessalonicenses', '1tm': '1 Timóteo',
+    'zc': 'Zacarias', 'ml': 'Malaquias', 'mt': 'Mateus', 'mc': 'Marcos', 'lc': 'Lucas',
+    'jo': 'João', 'at': 'Atos', 'rm': 'Romanos', '1co': '1 Coríntios', '2co': '2 Coríntios',
+    'gl': 'Gálatas', 'ef': 'Efésios', 'fp': 'Filipenses', 'cl': 'Colossenses',
+    '1ts': '1 Tessalonicenses', '2ts': '2 Tessalonicenses', '1tm': '1 Timóteo',
     '2tm': '2 Timóteo', 'tt': 'Tito', 'fm': 'Filemom', 'hb': 'Hebreus', 'tg': 'Tiago',
-    '1pe': '1 Pedro', '2pe': '2 Pedro', '1jo': '1 João', '2jo': '2 João', '3jo': '3 João', 'jd': 'Judas',
-    'ap': 'Apocalipse'
+    '1pe': '1 Pedro', '2pe': '2 Pedro', '1jo': '1 João', '2jo': '2 João', '3jo': '3 João',
+    'jd': 'Judas', 'ap': 'Apocalipse'
 }
 
 def _clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-# ============================================================================
-# PARSER DA BÍBLIA CORRIGIDO PARA ACEITAR MÚLTIPLOS FORMATOS
-# ============================================================================
 def _parse_reference(ref_string: str):
-    """
-    Analisa uma string de referência bíblica que pode estar em dois formatos:
-    1. Livro Capítulo:Versículo (ex: "João 3:16-18")
-    2. Livro Versículo (ex: "Judas 1", para livros de um só capítulo)
-    Retorna (livro, capítulo, versículo_inicial, versículo_final)
-    """
-    # Regex para o formato "Livro Capítulo:Versículo"
     pattern_ch_vs = re.compile(r'^\s*([1-3]?\s*.*?)\s*(\d+):(\d+)(?:-(\d+))?\s*$')
     match = pattern_ch_vs.match(ref_string)
     if match:
         groups = match.groups()
         return groups[0].strip(), int(groups[1]), int(groups[2]), int(groups[3]) if groups[3] else None
-
-    # Regex para o formato "Livro Versículo"
     pattern_vs_only = re.compile(r'^\s*([1-3]?\s*.*?)\s*(\d+)(?:-(\d+))?\s*$')
     match = pattern_vs_only.match(ref_string)
     if match:
         groups = match.groups()
-        # Para este formato, o capítulo é sempre 1
         return groups[0].strip(), 1, int(groups[1]), int(groups[2]) if groups[2] else None
-
     return None
 
 def _handle_help(args):
-    """Exibe a ajuda com os comandos e aliases."""
     table = Table(title="Ajuda - Comandos Cyber-Puritano", style="titulo")
-    table.add_column("Comando", style="info", no_wrap=True)
-    table.add_column("Alias", style="yellow")
-    table.add_column("Descrição", style="white")
-    
+    table.add_column("Comando", style="info", no_wrap=True); table.add_column("Alias", style="yellow"); table.add_column("Descrição", style="white")
     table.add_row("journal", "j", "Diário. Subcomandos: add, view, find <tag>.")
     table.add_row("actions", "a", "Ações. Subcomandos: add, view, update. Tipos: res, ora.")
     table.add_row("notes", "n", "Notas de Estudo. Subcomandos: add, view, read <id>.")
     table.add_row("bible", "b", "Bíblia. Ex: 'b jo 3:16-18', 'b Judas 3', 'b list'.")
     table.add_row("symbols", "s", "Símbolos de Fé. Ex: 's cfw 1.1', 's cmw 10'.")
-    # [MODIFICADO] Atualizada a descrição do comando 'psaltery'
-    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play [instrumental|capela]|all]', 'p list'.")
+    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play [i|c]]', 'p list'.")
     table.add_row("reports", "rep", "Exibe um relatório de métricas da última semana.")
     table.add_row("clear", "cls", "Limpa a tela.")
     table.add_row("exit", "q", "Sai da aplicação.")
     console.print(table)
 
+# ... (As funções _handle_journal, _handle_actions, _handle_notes, _handle_bible, _handle_symbols permanecem iguais) ...
 def _handle_journal(args):
     if not args or args[0] not in ['add', 'view', 'find']: console.print("[erro]Uso: journal [add|view|find <tag>]"); return
     sub_cmd = args[0]
@@ -145,49 +123,41 @@ def _handle_notes(args):
             else: console.print("[erro]Nota não encontrada.")
         except (IndexError, ValueError): console.print("[erro]Uso: notes read <id>")
 
-# ============================================================================
-# HANDLER DA BÍBLIA CORRIGIDO COM LÓGICA DE BUSCA INTELIGENTE
-# ============================================================================
 def _handle_bible(args):
-    """Busca e exibe passagens da Bíblia de forma precisa e flexível."""
     if not args: console.print("[erro]Uso: 'b <referência>' ou 'b list'."); return
-
     if args[0].lower() == 'list':
         books = bible.get_all_book_names()
         table = Table(title="Livros da Bíblia e Abreviações Comuns")
-        table.add_column("Livro", style="white")
-        table.add_column("Abrev.", style="yellow")
-        # Invertendo o dicionário para busca rápida de abreviações
+        table.add_column("Livro", style="white"); table.add_column("Abrev.", style="yellow")
         abbrev_map = {v: k for k, v in BIBLE_ABBREVIATIONS.items()}
-        for i in range(0, len(books), 2):
-            book1_name = books[i]['name'] if i < len(books) else ""
-            book2_name = books[i+1]['name'] if i+1 < len(books) else ""
+        # Ajustado para layout de duas colunas
+        num_books = len(books)
+        mid_point = (num_books + 1) // 2
+        for i in range(mid_point):
+            book1_name = books[i]['name']
             abbrev1 = abbrev_map.get(book1_name, "-")
-            abbrev2 = abbrev_map.get(book2_name, "-")
-            col1 = f"{book1_name} ({abbrev1})" if book1_name else ""
-            col2 = f"{book2_name} ({abbrev2})" if book2_name else ""
+            col1 = f"{book1_name} ({abbrev1})"
+            
+            col2 = ""
+            if i + mid_point < num_books:
+                book2_name = books[i + mid_point]['name']
+                abbrev2 = abbrev_map.get(book2_name, "-")
+                col2 = f"{book2_name} ({abbrev2})"
             table.add_row(col1, col2)
         console.print(table)
         return
-
     ref_string = " ".join(args)
     parsed_ref = _parse_reference(ref_string)
     if not parsed_ref: console.print("[erro]Formato de referência inválido. Use 'Livro Cap:Ver' ou 'Livro Ver'."); return
-    
     book_input, chapter, start_verse, end_verse = parsed_ref
-    
-    # Lógica de busca inteligente: tenta abreviação, depois nome completo
-    book_full_name = BIBLE_ABBREVIATIONS.get(book_input.lower())
+    book_full_name = BIBLE_ABBREVIATIONS.get(book_input.lower().replace(" ", ""))
     if not book_full_name:
-        # Verifica se o input (capitalizado) é um dos valores do dicionário
         if book_input.title() in BIBLE_ABBREVIATIONS.values():
             book_full_name = book_input.title()
         else:
             console.print(f"[erro]Livro '{book_input}' não reconhecido. Use 'b list' para ver as opções.[/erro]"); return
-        
     verses = bible.get_verses(book_full_name, chapter, start_verse, end_verse)
     if not verses: console.print("[erro]Referência não encontrada. Verifique o capítulo e os versículos."); return
-        
     console.print(f"\n[titulo]--- {book_full_name} {chapter} ---[/titulo]")
     for verse in verses: console.print(f"[yellow][{verse['verse']}][/yellow] {escape(verse['text'])}")
 
@@ -209,15 +179,16 @@ def _handle_symbols(args):
         except ValueError: console.print("[erro]Referência para catecismos deve ser um número.")
     else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
 
-# [MODIFICADO] Lógica do Saltério inteiramente atualizada
+# ============================================================================
+# (MODIFICADO) HANDLER DO SALTÉRIO COM LÓGICA DE REPRODUÇÃO INTELIGENTE
+# ============================================================================
 def _handle_psaltery(args):
-    if not args or args[0] == 'list':
+    if not args or args[0].lower() == 'list':
         refs = psaltery.get_all_psalms_references()
         table = Table(title="Saltério - Todos os Salmos")
         table.add_column("Referência", style="cyan", no_wrap=True)
         table.add_column("Métrica/Melodia", style="yellow")
-        for ref in refs:
-            table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
+        for ref in refs: table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
         console.print(table)
         return
 
@@ -226,78 +197,94 @@ def _handle_psaltery(args):
     psalm = psaltery.get_psalm_by_reference(referencia)
 
     if not psalm:
-        console.print(f"[erro]Salmo com referência '{referencia}' não encontrado."); return
+        console.print(f"[erro]Salmo com referência '{referencia}' não encontrado.")
+        return
 
     def show_meta():
         table = Table(title=f"Metadados do Salmo {psalm['referencia']}", box=None, show_header=False)
-        table.add_column(style="info")
-        table.add_column(style="white")
-        table.add_row("Referência:", psalm['referencia'])
-        table.add_row("Tipo:", psalm['tipo'])
-        table.add_row("Métrica:", psalm['metrica'])
-        table.add_row("Melodia:", psalm['melodia'])
-        table.add_row("Compositor:", psalm['compositor'])
-        table.add_row("Harmonização:", psalm['harmonizacao'])
-        console.print(table)
+        table.add_column(style="info"); table.add_column(style="white")
+        table.add_row("Referência:", psalm['referencia']); table.add_row("Tipo:", psalm['tipo']); table.add_row("Métrica:", psalm['metrica']); table.add_row("Melodia:", psalm['melodia'])
+        table.add_row("Compositor:", psalm['compositor']); table.add_row("Harmonização:", psalm['harmonizacao']); console.print(table)
 
     def show_letra():
         console.print(f"\n[titulo]--- Salmo {psalm['referencia']} - Letra ---[/titulo]")
         console.print(escape(psalm['letra']))
 
-    def play_audio(audio_file_path: str):
-        if not audio_file_path:
-            console.print(f"[warning]Não há um arquivo de áudio cadastrado para esta versão."); return
+    def play_music(psalm_data, requested_version=None):
+        options = []
+        if psalm_data['instrumental']: options.append(("Instrumental", psalm_data['instrumental']))
+        if psalm_data['à_capela']: options.append(("À Capela", psalm_data['à_capela']))
+
+        if not options:
+            console.print(f"[warning]O Salmo {referencia} não possui áudio cadastrado.[/warning]")
+            return
+
+        chosen_path = ""
+        # Lógica para seleção direta via argumento
+        if requested_version:
+            if requested_version in ["instrumental", "i"]:
+                path = next((p for name, p in options if name == "Instrumental"), None)
+                if path: chosen_path = path
+                else: console.print("[erro]Versão instrumental não disponível para este salmo.[/erro]"); return
+            elif requested_version in ["capela", "c"]:
+                path = next((p for name, p in options if name == "À Capela"), None)
+                if path: chosen_path = path
+                else: console.print("[erro]Versão à capela não disponível para este salmo.[/erro]"); return
         
-        # Constrói o caminho completo para o arquivo de áudio
-        full_path = os.path.join(DATA_DIR, audio_file_path)
+        # Lógica de prompt se nenhuma versão foi especificada ou encontrada
+        if not chosen_path:
+            if len(options) == 1:
+                chosen_path = options[0][1]
+                console.print(f"[info]Tocando a única versão disponível: {options[0][0]}[/info]")
+            else:
+                console.print("[prompt]Qual versão deseja ouvir?[/prompt]")
+                for i, (name, _) in enumerate(options): console.print(f"  [cyan]({i+1})[/cyan] {name}")
+                while True:
+                    choice_str = console.input("[prompt]Sua escolha (ou 'q' para sair): [/prompt]")
+                    if choice_str.lower() in ['q', 'sair']: return
+                    try:
+                        choice_idx = int(choice_str)
+                        if 1 <= choice_idx <= len(options):
+                            chosen_path = options[choice_idx - 1][1]
+                            break
+                        else: console.print("[erro]Escolha inválida.[/erro]")
+                    except ValueError: console.print("[erro]Por favor, insira um número.[/erro]")
+        
+        # (CAMINHO CORRIGIDO) Constrói o caminho a partir do diretório de dados
+        full_path = os.path.join(DATA_DIR, chosen_path)
 
         if not os.path.exists(full_path):
-            console.print(f"[erro]Arquivo de áudio não encontrado em: '{full_path}'"); return
+            console.print(f"[erro]Arquivo de áudio não encontrado em: {full_path}[/erro]")
+            return
             
+        process = None
         try:
-            console.print(f"[info]Iniciando mpv para tocar a melodia do Salmo {referencia}...[/info]")
-            # Usa o caminho do arquivo local em vez de uma URL
-            subprocess.run(['mpv', full_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            console.print(f"[info]Iniciando mpv...[/info]")
+            process = subprocess.Popen(['mpv', full_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            console.input("[prompt]Tocando... Pressione Enter para parar.[/prompt]")
         except FileNotFoundError:
-            console.print("[erro]Comando 'mpv' não encontrado. Por favor, instale o mpv para usar esta função.[/erro]")
-        except subprocess.CalledProcessError as e:
-            console.print(f"[erro]O mpv encontrou um erro: {e}[/erro]")
+            console.print("[erro]Comando 'mpv' não encontrado. Instale o mpv para usar esta função.[/erro]")
         except Exception as e:
             console.print(f"[erro]Ocorreu um erro inesperado ao tentar tocar: {e}[/erro]")
+        finally:
+            if process and process.poll() is None:
+                console.print("[info]Parando a reprodução.[/info]")
+                process.terminate()
 
-    if sub_cmd == 'view':
-        show_meta()
-        show_letra()
-    elif sub_cmd == 'meta':
-        show_meta()
-    elif sub_cmd == 'letra':
-        show_letra()
+    # Mapeamento dos comandos do saltério
+    if sub_cmd == 'view': show_meta(); show_letra()
+    elif sub_cmd == 'meta': show_meta()
+    elif sub_cmd == 'letra': show_letra()
     elif sub_cmd == 'play':
-        if len(args) < 3:
-            console.print("[erro]Uso: p <ref> play [instrumental|capela]"); return
-        
-        audio_type = args[2].lower()
-        if audio_type == 'instrumental':
-            play_audio(psalm['instrumental'])
-        elif audio_type == 'capela':
-            play_audio(psalm['à_capela'])
-        else:
-            console.print(f"[erro]Tipo de áudio '{audio_type}' inválido. Use 'instrumental' ou 'capela'.")
-
+        requested_version_arg = args[2].lower() if len(args) > 2 else None
+        play_music(psalm, requested_version=requested_version_arg)
     elif sub_cmd == 'all':
-        show_meta()
-        show_letra()
-        # Informa o usuário como tocar o áudio em vez de fazer isso automaticamente
-        has_instrumental = bool(psalm['instrumental'])
-        has_capela = bool(psalm['à_capela'])
-        if has_instrumental or has_capela:
-            console.print("\n[info]Versões de áudio disponíveis.[/info]")
-            if has_instrumental:
-                console.print(f" - Para ouvir a versão instrumental, digite: [yellow]p {referencia} play instrumental[/yellow]")
-            if has_capela:
-                console.print(f" - Para ouvir a versão à capela, digite: [yellow]p {referencia} play capela[/yellow]")
+        show_meta(); show_letra()
+        if psalm['instrumental'] or psalm['à_capela']:
+            console.input("\n[prompt]Pressione Enter para ver as opções de áudio...[/prompt]")
+            play_music(psalm)
     else:
-        console.print(f"[erro]Subcomando '{sub_cmd}' inválido. Use [view|meta|letra|play [instrumental|capela]|all].")
+        console.print(f"[erro]Subcomando '{sub_cmd}' inválido. Use [view|meta|letra|play|all].")
 
 
 # --- MAPA DE COMANDOS ---
