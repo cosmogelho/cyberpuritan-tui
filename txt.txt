@@ -383,7 +383,7 @@ def get_psalm_by_reference(reference: str):
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Usamos a coluna 'referencia' que contém valores como '15A', '15B', etc.
+    # Seleciona todas as colunas para garantir que todos os dados estejam disponíveis
     cursor.execute("SELECT * FROM salterio WHERE referencia = ?", (reference,))
     psalm = cursor.fetchone()
     conn.close()
@@ -393,7 +393,8 @@ def get_all_psalms_references():
     """Retorna uma lista de todas as referências de salmos para consulta."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, referencia, metrica, melodia FROM salterio ORDER BY id")
+    # (CORRIGIDO) Seleciona todas as colunas para ter acesso aos campos de áudio.
+    cursor.execute("SELECT * FROM salterio ORDER BY id")
     references = cursor.fetchall()
     conn.close()
     return references
@@ -551,7 +552,6 @@ def _handle_help(args):
     table.add_row("exit", "q", "Sai da aplicação.")
     console.print(table)
 
-# ... (As funções _handle_journal, _handle_actions, _handle_notes, _handle_bible, _handle_symbols permanecem iguais) ...
 def _handle_journal(args):
     if not args or args[0] not in ['add', 'view', 'find']: console.print("[erro]Uso: journal [add|view|find <tag>]"); return
     sub_cmd = args[0]
@@ -671,16 +671,52 @@ def _handle_symbols(args):
     else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
 
 # ============================================================================
-# (MODIFICADO) HANDLER DO SALTÉRIO COM LÓGICA DE REPRODUÇÃO INTELIGENTE
+# (CORRIGIDO) HANDLER DO SALTÉRIO COM ACESSO CORRETO A DADOS E QUERY CORRIGIDA
 # ============================================================================
 def _handle_psaltery(args):
     if not args or args[0].lower() == 'list':
-        refs = psaltery.get_all_psalms_references()
-        table = Table(title="Saltério - Todos os Salmos")
+        all_psalms = psaltery.get_all_psalms_references()
+        
+        table = Table(title="Saltério - Lista de Salmos")
         table.add_column("Referência", style="cyan", no_wrap=True)
-        table.add_column("Métrica/Melodia", style="yellow")
-        for ref in refs: table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
+        table.add_column("Música", style="yellow", justify="center")
+        
+        if not all_psalms:
+            console.print("[warning]Nenhum salmo encontrado na base de dados.[/warning]")
+            return
+
+        def sort_key(p):
+            match = re.match(r'(\d+)([A-Z]*)', p['referencia'])
+            if match:
+                num, letter = match.groups()
+                return int(num), letter
+            return 999, p['referencia'] 
+
+        sorted_psalms = sorted(all_psalms, key=sort_key)
+        
+        last_psalm_num = -1
+        for psalm in sorted_psalms:
+            current_psalm_num = sort_key(psalm)[0]
+            if last_psalm_num != -1 and current_psalm_num != last_psalm_num:
+                table.add_row("──────────", "──", style="dim")
+            last_psalm_num = current_psalm_num
+            
+            # (CORRIGIDO) Acesso aos dados usando colchetes e verificação de existência da chave
+            music_indicator = ""
+            has_instrumental = 'instrumental' in psalm.keys() and psalm['instrumental']
+            has_capela = 'à_capela' in psalm.keys() and psalm['à_capela']
+            
+            if has_instrumental and has_capela:
+                music_indicator = "A"
+            elif has_instrumental:
+                music_indicator = "I"
+            elif has_capela:
+                music_indicator = "C"
+
+            table.add_row(psalm['referencia'], music_indicator)
+            
         console.print(table)
+        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos[/info]")
         return
 
     referencia = args[0].upper()
@@ -711,7 +747,6 @@ def _handle_psaltery(args):
             return
 
         chosen_path = ""
-        # Lógica para seleção direta via argumento
         if requested_version:
             if requested_version in ["instrumental", "i"]:
                 path = next((p for name, p in options if name == "Instrumental"), None)
@@ -722,7 +757,6 @@ def _handle_psaltery(args):
                 if path: chosen_path = path
                 else: console.print("[erro]Versão à capela não disponível para este salmo.[/erro]"); return
         
-        # Lógica de prompt se nenhuma versão foi especificada ou encontrada
         if not chosen_path:
             if len(options) == 1:
                 chosen_path = options[0][1]
@@ -741,7 +775,6 @@ def _handle_psaltery(args):
                         else: console.print("[erro]Escolha inválida.[/erro]")
                     except ValueError: console.print("[erro]Por favor, insira um número.[/erro]")
         
-        # (CAMINHO CORRIGIDO) Constrói o caminho a partir do diretório de dados
         full_path = os.path.join(DATA_DIR, chosen_path)
 
         if not os.path.exists(full_path):
@@ -762,7 +795,6 @@ def _handle_psaltery(args):
                 console.print("[info]Parando a reprodução.[/info]")
                 process.terminate()
 
-    # Mapeamento dos comandos do saltério
     if sub_cmd == 'view': show_meta(); show_letra()
     elif sub_cmd == 'meta': show_meta()
     elif sub_cmd == 'letra': show_letra()
