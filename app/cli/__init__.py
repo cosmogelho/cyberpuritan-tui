@@ -2,7 +2,6 @@
 import click
 from rich.prompt import Prompt
 from app.core.theme import console
-from app.ui.status_panel import render_status_panel
 # A linha abaixo foi ajustada para um import relativo (note o ".")
 from .command_parser import parse 
 from app.ui.actions import COMMAND_MAP, SESSION_STATE

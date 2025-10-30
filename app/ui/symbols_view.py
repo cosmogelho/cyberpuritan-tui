@@ -1,24 +1,58 @@
 # app/ui/symbols_view.py
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.prompt import Confirm
-from app.core.theme import console
+from app.models import symbols
 
-def exibir_simbolos(resultados: list | dict, tipo: str):
-    """Formata e exibe os itens dos Símbolos de Fé."""
-    if isinstance(resultados, dict) and "erro" in resultados:
-        console.print(f"[erro]{resultados['erro']}[/erro]")
-        return
+def show_symbols_menu():
+    """
+    Função de entrada que o main.py chama. Gerencia a interface dos Símbolos de Fé.
+    """
+    while True:
+        print("\n--- Módulo dos Símbolos de Fé ---")
+        print("1. Confissão de Fé de Westminster (CFW)")
+        print("2. Catecismo Maior de Westminster (CMW)")
+        print("3. Breve Catecismo de Westminster (BCW)")
+        print("0. Voltar ao Menu Principal")
+        choice = input("Escolha uma opção: ")
 
-    for item in resultados:
-        if tipo == 'cfw':
-            titulo = f"CFW {item['chapter']}.{item['section']} - {item['title']}"
-            console.print(Panel(Markdown(item['text']), title=titulo, border_style="painel_borda"))
+        if choice == '1':
+            try:
+                chap = int(input("Digite o capítulo da CFW: "))
+                sec = int(input("Digite a seção: "))
+                article = symbols.get_cfw_article(chap, sec)
+                if article:
+                    print(f"\n--- CFW {article['chapter']}.{article['section']}: {article['title']} ---")
+                    print(article['text'])
+                else:
+                    print("Artigo não encontrado.")
+            except ValueError:
+                print("Entrada inválida. Por favor, digite números.")
+
+        elif choice == '2':
+            try:
+                qid = int(input("Digite o número da pergunta do CMW: "))
+                q = symbols.get_cmw_question(qid)
+                if q:
+                    print(f"\n--- CMW Pergunta {q['id']} ---")
+                    print(f"P: {q['question']}")
+                    print(f"R: {q['answer']}")
+                else:
+                    print("Pergunta não encontrada.")
+            except ValueError:
+                print("Entrada inválida. Por favor, digite um número.")
+
+        elif choice == '3':
+            try:
+                qid = int(input("Digite o número da pergunta do BCW: "))
+                q = symbols.get_bcw_question(qid)
+                if q:
+                    print(f"\n--- BCW Pergunta {q['id']} ---")
+                    print(f"P: {q['question']}")
+                    print(f"R: {q['answer']}")
+                else:
+                    print("Pergunta não encontrada.")
+            except ValueError:
+                print("Entrada inválida. Por favor, digite um número.")
+
+        elif choice == '0':
+            break
         else:
-            titulo = f"{tipo.upper()} - Pergunta {item['id']}"
-            pergunta_panel = Panel(f"[prompt]P:[/prompt] {item['question']}", title=titulo, border_style="painel_borda")
-            console.print(pergunta_panel)
-            
-            if Confirm.ask("Ver resposta?", default=True):
-                resposta_panel = Panel(f"[prompt]R:[/prompt] {item['answer']}", border_style="dim white")
-                console.print(resposta_panel)
+            print("Opção inválida.")

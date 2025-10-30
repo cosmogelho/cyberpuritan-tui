@@ -1,51 +1,54 @@
 # app/ui/bible_view.py
-from rich.panel import Panel
-from rich.text import Text
-from rich.table import Table
-from rich.console import Group
-from app.core.theme import console
-from app.core.config import LIVROS_E_ABREVIACOES
+import re
+from app.models import bible
 
-def exibir_passagem(resultado: dict):
-    """Formata e exibe uma passagem bíblica e suas referências cruzadas."""
-    if "erro" in resultado:
-        console.print(f"[erro]{resultado['erro']}[/erro]")
-        return
-
-    # Painel do Texto Bíblico
-    texto_formatado = Text()
-    for v in resultado['versiculos']:
-        texto_formatado.append(f"[{v['numero']}] ", style="referencia")
-        texto_formatado.append(f"{v['texto']} ")
-    titulo = f"Bíblia {resultado['versao']} | {resultado['referencia']}"
-    painel_texto = Panel(texto_formatado, title=titulo, border_style="painel_borda")
-
-    console.print(painel_texto)
-
-    # Painel das Referências Cruzadas
-    if resultado.get("cross_references"):
-        tabela_refs = Table(title="Sua Concordância Pessoal", box=None, padding=(0, 1))
-        tabela_refs.add_column("ID", style="destaque")
-        tabela_refs.add_column("Título do Registro")
-        tabela_refs.add_column("Autor/Pregador")
+def _parse_reference(ref_string: str):
+    """
+    Analisa uma string de referência bíblica (ex: 'João 3:16-18') e retorna as partes.
+    Retorna None se o formato for inválido.
+    """
+    # Regex para capturar Livro, Capítulo, Versículo inicial e Versículo final (opcional)
+    pattern = re.compile(r'^\s*([1-3]?\s*\w+)\s*(\d+):(\d+)(?:-(\d+))?\s*$')
+    match = pattern.match(ref_string)
+    
+    if not match:
+        return None
         
-        for ref in resultado["cross_references"]:
-            tabela_refs.add_row(
-                str(ref['record_id']),
-                ref['titulo'],
-                ref['author']
-            )
-        console.print(Panel(tabela_refs, border_style="dim white"))
+    groups = match.groups()
+    book = groups[0].strip()
+    chapter = int(groups[1])
+    start_verse = int(groups[2])
+    end_verse = int(groups[3]) if groups[3] else None
+    
+    return book, chapter, start_verse, end_verse
 
+def show_bible_menu():
+    """
+    Função de entrada que o main.py chama. Gerencia a interface da Bíblia.
+    """
+    print("\n--- Módulo da Bíblia ---")
+    print("Digite a referência bíblica (ex: 'Gênesis 1:1', 'Jo 3:16-18') ou 'sair'.")
 
-def mostrar_tabela_livros():
-    # ... (esta função permanece a mesma)
-    tabela = Table(title="Livros da Bíblia e Abreviações", box=None, padding=(0, 1))
-    tabela.add_column("Nome", style="cyan"); tabela.add_column("Abrev.", style="yellow")
-    tabela.add_column("Nome", style="cyan"); tabela.add_column("Abrev.", style="yellow")
-    metade = (len(LIVROS_E_ABREVIACOES) + 1) // 2
-    for i in range(metade):
-        p1 = LIVROS_E_ABREVIACOES[i]
-        p2 = LIVROS_E_ABREVIACOES[i + metade] if i + metade < len(LIVROS_E_ABREVIACOES) else ("", "")
-        tabela.add_row(p1[0], p1[1], p2[0], p2[1])
-    console.print(tabela)
+    while True:
+        ref_input = input("\nBuscar referência: ")
+        if ref_input.lower() in ['sair', '0', 'exit', 'voltar']:
+            break
+            
+        parsed_ref = _parse_reference(ref_input)
+        
+        if not parsed_ref:
+            print("Formato de referência inválido. Use 'Livro Capítulo:Versículo'.")
+            continue
+            
+        book, chapter, start_verse, end_verse = parsed_ref
+        
+        verses = bible.get_verses(book, chapter, start_verse, end_verse)
+        
+        if not verses:
+            print("Referência não encontrada. Verifique o nome do livro e os números.")
+        else:
+            # Imprime o cabeçalho com o nome completo do livro e capítulo
+            full_book_name = verses[0]['book_name']
+            print(f"\n--- {full_book_name} {chapter} ---")
+            for verse in verses:
+                print(f"[{verse['verse']}] {verse['text']}")

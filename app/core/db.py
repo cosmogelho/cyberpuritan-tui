@@ -1,31 +1,25 @@
 # app/core/db.py
 import sqlite3
-from pathlib import Path
-from .config import DB_BIBLIA_PATH, DB_DADOS_PATH
 
-class _Singleton:
-    """Mantém duas conexões SQLite únicas (uma para a Bíblia, outra para os dados pessoais)."""
-    _biblia_conn: sqlite3.Connection | None = None
-    _dados_conn: sqlite3.Connection | None = None
+# O caminho para o banco de dados de dados do usuário.
+DB_PATH = 'data/dados.db'
 
-    @classmethod
-    def bible(cls) -> sqlite3.Connection:
-        if cls._biblia_conn is None:
-            # str(Path(...)) garante que o caminho funcione em qualquer sistema operacional.
-            cls._biblia_conn = sqlite3.connect(str(Path(DB_BIBLIA_PATH)))
-            cls._biblia_conn.row_factory = sqlite3.Row
-        return cls._biblia_conn
+def get_db_connection():
+    """
+    Cria e retorna uma conexão com o banco de dados principal (dados.db).
+    Levanta um erro se a conexão falhar.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row  # Isso permite acessar colunas pelo nome
+    return conn
 
-    @classmethod
-    def data(cls) -> sqlite3.Connection:
-        if cls._dados_conn is None:
-            cls._dados_conn = sqlite3.connect(str(Path(DB_DADOS_PATH)))
-            cls._dados_conn.row_factory = sqlite3.Row
-        return cls._dados_conn
+# Se você precisar de uma conexão separada para a Bíblia em algum ponto:
+BIBLE_DB_PATH = 'data/Biblia.sqlite'
 
-# Exporta nomes curtos e claros para serem usados no resto do programa
-def get_bible_conn() -> sqlite3.Connection:
-    return _Singleton.bible()
-
-def get_data_conn() -> sqlite3.Connection:
-    return _Singleton.data()
+def get_bible_db_connection():
+    """
+    Cria e retorna uma conexão com o banco de dados da Bíblia.
+    """
+    conn = sqlite3.connect(BIBLE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn

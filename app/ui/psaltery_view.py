@@ -78,3 +78,24 @@ def exibir_detalhes_do_salmo(versao: dict):
     if video_url := versao.get('video_url'):
         if Confirm.ask("\n[prompt]Ouvir o áudio desta versão com mpv?[/prompt]", default=False):
             _tocar_audio_mpv(video_url)
+
+# Adicione esta função ao final do arquivo app/ui/psaltery_view.py
+
+def show_psaltery_menu():
+    """
+    Esta é a nova função de entrada que o main.py irá chamar.
+    """
+    print("\n--- Módulo do Saltério ---")
+    
+    # ============================================================================
+    # COLOQUE AQUI O CÓDIGO QUE VOCÊ USAVA PARA INICIAR A INTERFACE DO SALTÉRIO
+    #
+    # Exemplo:
+    # browser = PsalteryBrowser()
+    # browser.start()
+    #
+    # Adapte à sua implementação original.
+    # ============================================================================
+
+    print("Interface do Saltério ainda a ser conectada.")
+    input("Pressione Enter para voltar ao menu principal...")
