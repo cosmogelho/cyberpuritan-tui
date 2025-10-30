@@ -6,8 +6,13 @@ from datetime import datetime
 from rich.panel import Panel
 from rich.table import Table
 from rich.markup import escape
+
+# Importa DATA_DIR para construir caminhos de arquivo corretamente
+from app.core.config import DATA_DIR
 from app.core.theme import console
 from app.models import journal_model, action_item_model, notes_model, bible, symbols, psaltery
+# A linha abaixo foi movida do __init__.py para cá para evitar dependência circular
+from app.reports import metrics
 
 SESSION_STATE = {'versao_biblia': 'NAA'}
 
@@ -71,7 +76,8 @@ def _handle_help(args):
     table.add_row("notes", "n", "Notas de Estudo. Subcomandos: add, view, read <id>.")
     table.add_row("bible", "b", "Bíblia. Ex: 'b jo 3:16-18', 'b Judas 3', 'b list'.")
     table.add_row("symbols", "s", "Símbolos de Fé. Ex: 's cfw 1.1', 's cmw 10'.")
-    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play|all]', 'p list'.")
+    # [MODIFICADO] Atualizada a descrição do comando 'psaltery'
+    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play [instrumental|capela]|all]', 'p list'.")
     table.add_row("reports", "rep", "Exibe um relatório de métricas da última semana.")
     table.add_row("clear", "cls", "Limpa a tela.")
     table.add_row("exit", "q", "Sai da aplicação.")
@@ -203,37 +209,96 @@ def _handle_symbols(args):
         except ValueError: console.print("[erro]Referência para catecismos deve ser um número.")
     else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
 
+# [MODIFICADO] Lógica do Saltério inteiramente atualizada
 def _handle_psaltery(args):
     if not args or args[0] == 'list':
-        refs = psaltery.get_all_psalms_references(); table = Table(title="Saltério - Todos os Salmos")
-        table.add_column("Referência", style="cyan", no_wrap=True); table.add_column("Métrica/Melodia", style="yellow")
-        for ref in refs: table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
-        console.print(table); return
-    referencia = args[0].upper(); sub_cmd = args[1].lower() if len(args) > 1 else 'view'
+        refs = psaltery.get_all_psalms_references()
+        table = Table(title="Saltério - Todos os Salmos")
+        table.add_column("Referência", style="cyan", no_wrap=True)
+        table.add_column("Métrica/Melodia", style="yellow")
+        for ref in refs:
+            table.add_row(ref['referencia'], f"{ref['metrica']} - {ref['melodia']}")
+        console.print(table)
+        return
+
+    referencia = args[0].upper()
+    sub_cmd = args[1].lower() if len(args) > 1 else 'view'
     psalm = psaltery.get_psalm_by_reference(referencia)
-    if not psalm: console.print(f"[erro]Salmo com referência '{referencia}' não encontrado."); return
+
+    if not psalm:
+        console.print(f"[erro]Salmo com referência '{referencia}' não encontrado."); return
+
     def show_meta():
-        table = Table(title=f"Metadados do Salmo {psalm['referencia']}", box=None, show_header=False); table.add_column(style="info"); table.add_column(style="white")
-        table.add_row("Referência:", psalm['referencia']); table.add_row("Tipo:", psalm['tipo']); table.add_row("Métrica:", psalm['metrica']); table.add_row("Melodia:", psalm['melodia'])
-        table.add_row("Compositor:", psalm['compositor']); table.add_row("Harmonização:", psalm['harmonizacao']); console.print(table)
-    def show_letra(): console.print(f"\n[titulo]--- Salmo {psalm['referencia']} - Letra ---[/titulo]"); console.print(escape(psalm['letra']))
-    def play_music():
-        url = psalm['video_url']
-        if not url: console.print(f"[warning]O Salmo {referencia} não possui um link de áudio/vídeo cadastrado."); return
+        table = Table(title=f"Metadados do Salmo {psalm['referencia']}", box=None, show_header=False)
+        table.add_column(style="info")
+        table.add_column(style="white")
+        table.add_row("Referência:", psalm['referencia'])
+        table.add_row("Tipo:", psalm['tipo'])
+        table.add_row("Métrica:", psalm['metrica'])
+        table.add_row("Melodia:", psalm['melodia'])
+        table.add_row("Compositor:", psalm['compositor'])
+        table.add_row("Harmonização:", psalm['harmonizacao'])
+        console.print(table)
+
+    def show_letra():
+        console.print(f"\n[titulo]--- Salmo {psalm['referencia']} - Letra ---[/titulo]")
+        console.print(escape(psalm['letra']))
+
+    def play_audio(audio_file_path: str):
+        if not audio_file_path:
+            console.print(f"[warning]Não há um arquivo de áudio cadastrado para esta versão."); return
+        
+        # Constrói o caminho completo para o arquivo de áudio
+        full_path = os.path.join(DATA_DIR, audio_file_path)
+
+        if not os.path.exists(full_path):
+            console.print(f"[erro]Arquivo de áudio não encontrado em: '{full_path}'"); return
+            
         try:
             console.print(f"[info]Iniciando mpv para tocar a melodia do Salmo {referencia}...[/info]")
-            subprocess.run(['mpv', '--no-video', url], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except FileNotFoundError: console.print("[erro]Comando 'mpv' não encontrado. Por favor, instale o mpv para usar esta função.[/erro]")
-        except subprocess.CalledProcessError as e: console.print(f"[erro]O mpv encontrou um erro: {e}[/erro]")
-        except Exception as e: console.print(f"[erro]Ocorreu um erro inesperado ao tentar tocar: {e}[/erro]")
-    if sub_cmd == 'view': show_meta(); show_letra()
-    elif sub_cmd == 'meta': show_meta()
-    elif sub_cmd == 'letra': show_letra()
-    elif sub_cmd == 'play': play_music()
+            # Usa o caminho do arquivo local em vez de uma URL
+            subprocess.run(['mpv', full_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            console.print("[erro]Comando 'mpv' não encontrado. Por favor, instale o mpv para usar esta função.[/erro]")
+        except subprocess.CalledProcessError as e:
+            console.print(f"[erro]O mpv encontrou um erro: {e}[/erro]")
+        except Exception as e:
+            console.print(f"[erro]Ocorreu um erro inesperado ao tentar tocar: {e}[/erro]")
+
+    if sub_cmd == 'view':
+        show_meta()
+        show_letra()
+    elif sub_cmd == 'meta':
+        show_meta()
+    elif sub_cmd == 'letra':
+        show_letra()
+    elif sub_cmd == 'play':
+        if len(args) < 3:
+            console.print("[erro]Uso: p <ref> play [instrumental|capela]"); return
+        
+        audio_type = args[2].lower()
+        if audio_type == 'instrumental':
+            play_audio(psalm['instrumental'])
+        elif audio_type == 'capela':
+            play_audio(psalm['à_capela'])
+        else:
+            console.print(f"[erro]Tipo de áudio '{audio_type}' inválido. Use 'instrumental' ou 'capela'.")
+
     elif sub_cmd == 'all':
-        show_meta(); show_letra()
-        if psalm['video_url']: console.input("\n[prompt]Pressione Enter para tocar a melodia...[/prompt]"); play_music()
-    else: console.print(f"[erro]Subcomando '{sub_cmd}' inválido. Use [view|meta|letra|play|all].")
+        show_meta()
+        show_letra()
+        # Informa o usuário como tocar o áudio em vez de fazer isso automaticamente
+        has_instrumental = bool(psalm['instrumental'])
+        has_capela = bool(psalm['à_capela'])
+        if has_instrumental or has_capela:
+            console.print("\n[info]Versões de áudio disponíveis.[/info]")
+            if has_instrumental:
+                console.print(f" - Para ouvir a versão instrumental, digite: [yellow]p {referencia} play instrumental[/yellow]")
+            if has_capela:
+                console.print(f" - Para ouvir a versão à capela, digite: [yellow]p {referencia} play capela[/yellow]")
+    else:
+        console.print(f"[erro]Subcomando '{sub_cmd}' inválido. Use [view|meta|letra|play [instrumental|capela]|all].")
+
 
 # --- MAPA DE COMANDOS ---
 COMMAND_MAP = {
