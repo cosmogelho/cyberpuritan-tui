@@ -1,76 +1,331 @@
-### FILE: ./app/cli/command_parser.py ###
-# app/cli/command_parser.py
-DEFAULT_ALIASES = {
-    "j": "journal",      # Diário (journal)
-    "a": "actions",      # Ações (resoluções e orações)
-    "n": "notes",        # Notas (commonplace book)
-    "b": "bible",        # Bíblia
-    "s": "symbols",      # Símbolos de Fé
-    "p": "psaltery",     # Saltério
-    "rep": "reports",
-    "h": "help",
-    "q": "exit",
-    "cls": "clear"
+Estrutura de diretórios:
+./
+├── app
+│   ├── cli
+│   │   ├── command_parser.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   ├── core
+│   │   ├── bible_parser.py
+│   │   ├── config.py
+│   │   ├── data_models.py
+│   │   ├── db.py
+│   │   ├── __pycache__
+│   │   └── theme.py
+│   ├── handlers
+│   │   ├── actions_handler.py
+│   │   ├── bible_handler.py
+│   │   ├── help_handler.py
+│   │   ├── journal_handler.py
+│   │   ├── notes_handler.py
+│   │   ├── psaltery_handler.py
+│   │   ├── __pycache__
+│   │   ├── reports_handler.py
+│   │   └── symbols_handler.py
+│   ├── models
+│   │   ├── action_item_model.py
+│   │   ├── bible.py
+│   │   ├── journal_model.py
+│   │   ├── notes_model.py
+│   │   ├── psaltery.py
+│   │   ├── __pycache__
+│   │   └── symbols.py
+│   ├── __pycache__
+│   ├── reports
+│   │   ├── metrics.py
+│   │   └── __pycache__
+│   ├── screens
+│   │   ├── add_journal_screen.py
+│   │   ├── home_screen.py
+│   │   ├── journal_screen.py
+│   │   └── __pycache__
+│   ├── textual_app.py
+│   └── ui
+│       ├── actions_old.py
+│       ├── actions.py
+│       ├── art
+│       │   └── banner_art.txt
+│       ├── icons.py
+│       ├── __pycache__
+│       └── styles.tcss
+├── data
+│   ├── Biblia.sqlite
+│   ├── dados.db
+│   └── saltério
+│       ├── à_capela
+│       │   ├── Salmo 10B.mp3
+│       │   ├── Salmo 110A.mp3
+│       │   ├── Salmo 11B.mp3
+│       │   ├── Salmo 122B.mp3
+│       │   ├── Salmo 12A.mp3
+│       │   ├── Salmo 137B.mp3
+│       │   ├── Salmo 139 (Davi).mp3
+│       │   ├── Salmo 13B.mp3
+│       │   ├── Salmo 146B.mp3
+│       │   ├── Salmo 14A.mp3
+│       │   ├── Salmo 15A.mp3
+│       │   ├── Salmo 15B.mp3
+│       │   ├── Salmo 16B.mp3
+│       │   ├── Salmo 19B (v. 1-9).mp3
+│       │   ├── Salmo 1A.mp3
+│       │   ├── Salmo 1B.mp3
+│       │   ├── Salmo 20B.mp3
+│       │   ├── Salmo 21B.mp3
+│       │   ├── Salmo 22B (v. 1-13).mp3
+│       │   ├── Salmo 22B (v. 14-23).mp3
+│       │   ├── Salmo 22B (v. 24-31).mp3
+│       │   ├── Salmo 24B.mp3
+│       │   ├── Salmo 25A (v. 12-22).mp3
+│       │   ├── Salmo 29A.mp3
+│       │   ├── Salmo 2A.mp3
+│       │   ├── Salmo 32A.mp3
+│       │   ├── Salmo 32B.mp3
+│       │   ├── Salmo 33B.mp3
+│       │   ├── Salmo 36B.mp3
+│       │   ├── Salmo 3A.mp3
+│       │   ├── Salmo 3B.mp3
+│       │   ├── Salmo 40B (v. 1-10).mp3
+│       │   ├── Salmo 46B.mp3
+│       │   ├── Salmo 4A (v. 1-2).mp3
+│       │   ├── Salmo 4B.mp3
+│       │   ├── Salmo 53A.mp3
+│       │   ├── Salmo 5A.mp3
+│       │   ├── Salmo 61B.mp3
+│       │   ├── Salmo 6B.mp3
+│       │   ├── Salmo 73B (v. 1-16).mp3
+│       │   ├── Salmo 73B (v. 17-28).mp3
+│       │   ├── Salmo 98A (v. 1-4).mp3
+│       │   └── Salmo 98B.mp3
+│       ├── instrumental
+│       │   ├── Salmo 100A.mp3
+│       │   ├── Salmo 101A.mp3
+│       │   ├── Salmo 102A.mp3
+│       │   ├── Salmo 103A.mp3
+│       │   ├── Salmo 104A.mp3
+│       │   ├── Salmo 105A.mp3
+│       │   ├── Salmo 106A.mp3
+│       │   ├── Salmo 107A.mp3
+│       │   ├── Salmo 108A.mp3
+│       │   ├── Salmo 109A.mp3
+│       │   ├── Salmo 10A.mp3
+│       │   ├── Salmo 110A.mp3
+│       │   ├── Salmo 111A.mp3
+│       │   ├── Salmo 112A.mp3
+│       │   ├── Salmo 113A.mp3
+│       │   ├── Salmo 114A.mp3
+│       │   ├── Salmo 115A.mp3
+│       │   ├── Salmo 116A.mp3
+│       │   ├── Salmo 117A.mp3
+│       │   ├── Salmo 118A.mp3
+│       │   ├── Salmo 119 105-112A.mp3
+│       │   ├── Salmo 119 113-120A.mp3
+│       │   ├── Salmo 119 121-128A.mp3
+│       │   ├── Salmo 119 129-136A.mp3
+│       │   ├── Salmo 119 137-144A.mp3
+│       │   ├── Salmo 119 145-152A.mp3
+│       │   ├── Salmo 119 153-160A.mp3
+│       │   ├── Salmo 119 161-168A.mp3
+│       │   ├── Salmo 119 169-176A.mp3
+│       │   ├── Salmo 119 17-24A.mp3
+│       │   ├── Salmo 119 1-8A.mp3
+│       │   ├── Salmo 119 25-32A.mp3
+│       │   ├── Salmo 119 33-40A.mp3
+│       │   ├── Salmo 119 41-48A.mp3
+│       │   ├── Salmo 119 49-56A.mp3
+│       │   ├── Salmo 119 57-64A.mp3
+│       │   ├── Salmo 119 65-72A.mp3
+│       │   ├── Salmo 119 73-80A.mp3
+│       │   ├── Salmo 119 81-88A.mp3
+│       │   ├── Salmo 119 89-96A.mp3
+│       │   ├── Salmo 119 9-16A.mp3
+│       │   ├── Salmo 119 97-104A.mp3
+│       │   ├── Salmo 11A.mp3
+│       │   ├── Salmo 120A.mp3
+│       │   ├── Salmo 121A.mp3
+│       │   ├── Salmo 122A.mp3
+│       │   ├── Salmo 123A.mp3
+│       │   ├── Salmo 124A.mp3
+│       │   ├── Salmo 125A.mp3
+│       │   ├── Salmo 126A.mp3
+│       │   ├── Salmo 127A.mp3
+│       │   ├── Salmo 128A.mp3
+│       │   ├── Salmo 129A.mp3
+│       │   ├── Salmo 12A.mp3
+│       │   ├── Salmo 130A.mp3
+│       │   ├── Salmo 131A.mp3
+│       │   ├── Salmo 132A.mp3
+│       │   ├── Salmo 133A.mp3
+│       │   ├── Salmo 134A.mp3
+│       │   ├── Salmo 135A.mp3
+│       │   ├── Salmo 136A.mp3
+│       │   ├── Salmo 137A.mp3
+│       │   ├── Salmo 138A.mp3
+│       │   ├── Salmo 139A.mp3
+│       │   ├── Salmo 13A.mp3
+│       │   ├── Salmo 140A.mp3
+│       │   ├── Salmo 141A.mp3
+│       │   ├── Salmo 142A.mp3
+│       │   ├── Salmo 143A.mp3
+│       │   ├── Salmo 144A.mp3
+│       │   ├── Salmo 145A.mp3
+│       │   ├── Salmo 146A.mp3
+│       │   ├── Salmo 147A.mp3
+│       │   ├── Salmo 148A.mp3
+│       │   ├── Salmo 149A.mp3
+│       │   ├── Salmo 14A.mp3
+│       │   ├── Salmo 150A.mp3
+│       │   ├── Salmo 15A.mp3
+│       │   ├── Salmo 16A.mp3
+│       │   ├── Salmo 17A.mp3
+│       │   ├── Salmo 18A.mp3
+│       │   ├── Salmo 19A.mp3
+│       │   ├── Salmo 1A.mp3
+│       │   ├── Salmo 20A.mp3
+│       │   ├── Salmo 21A.mp3
+│       │   ├── Salmo 22A.mp3
+│       │   ├── Salmo 23A.mp3
+│       │   ├── Salmo 24A.mp3
+│       │   ├── Salmo 25A.mp3
+│       │   ├── Salmo 26A.mp3
+│       │   ├── Salmo 27A.mp3
+│       │   ├── Salmo 28A.mp3
+│       │   ├── Salmo 29A.mp3
+│       │   ├── Salmo 2A.mp3
+│       │   ├── Salmo 30A.mp3
+│       │   ├── Salmo 31A.mp3
+│       │   ├── Salmo 32A.mp3
+│       │   ├── Salmo 33A.mp3
+│       │   ├── Salmo 34A.mp3
+│       │   ├── Salmo 35A.mp3
+│       │   ├── Salmo 36A.mp3
+│       │   ├── Salmo 37A.mp3
+│       │   ├── Salmo 38A.mp3
+│       │   ├── Salmo 39A.mp3
+│       │   ├── Salmo 3A.mp3
+│       │   ├── Salmo 40A.mp3
+│       │   ├── Salmo 41A.mp3
+│       │   ├── Salmo 42A.mp3
+│       │   ├── Salmo 43A.mp3
+│       │   ├── Salmo 44A.mp3
+│       │   ├── Salmo 45A.mp3
+│       │   ├── Salmo 46A.mp3
+│       │   ├── Salmo 47A.mp3
+│       │   ├── Salmo 48A.mp3
+│       │   ├── Salmo 49A.mp3
+│       │   ├── Salmo 4A.mp3
+│       │   ├── Salmo 50A.mp3
+│       │   ├── Salmo 51A.mp3
+│       │   ├── Salmo 52A.mp3
+│       │   ├── Salmo 53A.mp3
+│       │   ├── Salmo 54A.mp3
+│       │   ├── Salmo 55A.mp3
+│       │   ├── Salmo 56A.mp3
+│       │   ├── Salmo 57A.mp3
+│       │   ├── Salmo 58A.mp3
+│       │   ├── Salmo 59A.mp3
+│       │   ├── Salmo 5A.mp3
+│       │   ├── Salmo 60A.mp3
+│       │   ├── Salmo 61A.mp3
+│       │   ├── Salmo 62A.mp3
+│       │   ├── Salmo 63A.mp3
+│       │   ├── Salmo 64A.mp3
+│       │   ├── Salmo 65A.mp3
+│       │   ├── Salmo 66A.mp3
+│       │   ├── Salmo 67A.mp3
+│       │   ├── Salmo 68A.mp3
+│       │   ├── Salmo 69A.mp3
+│       │   ├── Salmo 6A.mp3
+│       │   ├── Salmo 70A.mp3
+│       │   ├── Salmo 71A.mp3
+│       │   ├── Salmo 72A.mp3
+│       │   ├── Salmo 73A.mp3
+│       │   ├── Salmo 74A.mp3
+│       │   ├── Salmo 75A.mp3
+│       │   ├── Salmo 76A.mp3
+│       │   ├── Salmo 77A.mp3
+│       │   ├── Salmo 78A.mp3
+│       │   ├── Salmo 79A.mp3
+│       │   ├── Salmo 7A.mp3
+│       │   ├── Salmo 80A.mp3
+│       │   ├── Salmo 81A.mp3
+│       │   ├── Salmo 82A.mp3
+│       │   ├── Salmo 83A.mp3
+│       │   ├── Salmo 84A.mp3
+│       │   ├── Salmo 85A.mp3
+│       │   ├── Salmo 86A.mp3
+│       │   ├── Salmo 87A.mp3
+│       │   ├── Salmo 88A.mp3
+│       │   ├── Salmo 89A.mp3
+│       │   ├── Salmo 8A.mp3
+│       │   ├── Salmo 90A.mp3
+│       │   ├── Salmo 91A.mp3
+│       │   ├── Salmo 92A.mp3
+│       │   ├── Salmo 93A.mp3
+│       │   ├── Salmo 94A.mp3
+│       │   ├── Salmo 95A.mp3
+│       │   ├── Salmo 96A.mp3
+│       │   ├── Salmo 97A.mp3
+│       │   ├── Salmo 98A.mp3
+│       │   ├── Salmo 99A.mp3
+│       │   └── Salmo 9A.mp3
+│       └── partituras.pdf
+├── main.py
+├── README.md
+└── txt.txt
+
+22 directories, 251 files
+
+Conteúdo dos arquivos Python:
+-e 
+Arquivo: ./app/core/config.py
+import os
+
+# --- Gestão de Caminhos ---
+APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(APP_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+
+# --- Arquivos de Dados ---
+# Apontando para os novos bancos de dados centralizados
+DB_BIBLIA_PATH = os.path.join(DATA_DIR, 'Biblia.sqlite')
+DB_DADOS_PATH = os.path.join(DATA_DIR, 'dados.db')
+
+# --- Configurações da Aplicação ---
+VERSAO_BIBLIA_PADRAO = "NAA"
+VERSOES_BIBLIA_DISPONIVEIS = ["NAA", "ARA", "NVI"] # Manter para o seletor da UI
+
+# --- Constantes da Bíblia ---
+LIVROS_E_ABREVIACOES = [
+    ("Gênesis", "Gn"), ("Êxodo", "Ex"), ("Levítico", "Lv"), ("Números", "Nm"),
+    ("Deuteronômio", "Dt"), ("Josué", "Js"), ("Juízes", "Jz"), ("Rute", "Rt"),
+    ("1 Samuel", "1Sm"), ("2 Samuel", "2Sm"), ("1 Reis", "1Rs"), ("2 Reis", "2Rs"),
+    ("1 Crônicas", "1Cr"), ("2 Crônicas", "2Cr"), ("Esdras", "Ed"), ("Neemias", "Ne"),
+    ("Ester", "Et"), ("Jó", "Jó"), ("Salmos", "Sl"), ("Provérbios", "Pv"),
+    ("Eclesiastes", "Ec"), ("Cantares", "Ct"), ("Isaías", "Is"), ("Jeremias", "Jr"),
+    ("Lamentações", "Lm"), ("Ezequiel", "Ez"), ("Daniel", "Dn"), ("Oséias", "Os"),
+    ("Joel", "Jl"), ("Amós", "Am"), ("Obadias", "Ob"), ("Jonas", "Jn"),
+    ("Miquéias", "Mq"), ("Naum", "Na"), ("Habacuque", "Hc"), ("Sofonias", "Sf"),
+    ("Ageu", "Ag"), ("Zacarias", "Zc"), ("Malaquias", "Ml"), ("Mateus", "Mt"),
+    ("Marcos", "Mc"), ("Lucas", "Lc"), ("João", "Jo"), ("Atos", "At"),
+    ("Romanos", "Rm"), ("1 Coríntios", "1Co"), ("2 Coríntios", "2Co"), ("Gálatas", "Gl"),
+    ("Efésios", "Ef"), ("Filipenses", "Fp"), ("Colossenses", "Cl"),
+    ("1 Tessalonicenses", "1Ts"), ("2 Tessalonicenses", "2Ts"), ("1 Timóteo", "1Tm"),
+    ("2 Timóteo", "2Tm"), ("Tito", "Tt"), ("Filemom", "Fm"), ("Hebreus", "Hb"),
+    ("Tiago", "Tg"), ("1 Pedro", "1Pe"), ("2 Pedro", "2Pe"), ("1 João", "1Jo"),
+    ("2 João", "2Jo"), ("3 João", "3Jo"), ("Judas", "Jd"), ("Apocalipse", "Ap")
+]
+MAPA_ABREVIACOES = {abrev.lower(): nome for nome, abrev in LIVROS_E_ABREVIACOES}
+
+# Adicione esta linha em config.py
+CALENDARIO_SEMANAL = {
+    1: "Dia de Reunião de Oração",  # Terça-feira (Monday is 0)
+    3: "Dia de Estudo de Doutrina", # Quinta-feira
 }
+-e 
+--- Fim do arquivo ./app/core/config.py ---
 
-ALIASES = DEFAULT_ALIASES
-
-def parse(raw: str) -> dict | None:
-    """Recebe a linha do usuário e a transforma em um comando e argumentos."""
-    raw = raw.strip()
-    if not raw:
-        return None
-
-    parts = raw.split()
-    cmd_or_alias = parts[0].lower()
-    command = ALIASES.get(cmd_or_alias, cmd_or_alias)
-
-    return {"cmd": command, "args": parts[1:]}
-
-### FILE: ./app/cli/__init__.py ###
-# app/cli/__init__.py
-import click
-from rich.prompt import Prompt
-from app.core.theme import console
-from .command_parser import parse 
-from app.ui.actions import COMMAND_MAP, SESSION_STATE # Importa do novo local
-
-def run_interactive_mode():
-    """Inicia o loop principal da aplicação no modo interativo."""
-    console.clear()
-    console.print("[bold cyan]Cyber-Puritano[/bold cyan] | Soli Deo Gloria!")
-    console.print("Digite '[yellow]help[/yellow]' para ver os comandos ou '[yellow]q[/yellow]' para sair.")
-
-    while True:
-        try:
-            # console.print(render_status_panel()) # Se você tiver um painel de status
-            versao_biblia = SESSION_STATE.get('versao_biblia', 'NAA')
-            raw_input = Prompt.ask(f"[cyan]({versao_biblia})[/cyan] [prompt]>[/prompt]")
-            
-            parsed = parse(raw_input)
-            if not parsed: continue
-
-            cmd, args = parsed["cmd"], parsed["args"]
-            if cmd in ("exit", "q"): break
-            
-            if action := COMMAND_MAP.get(cmd):
-                action(args)
-            else:
-                console.print(f"[erro]Comando '{cmd}' não encontrado. Digite 'help'.[/erro]")
-
-        except (KeyboardInterrupt, EOFError):
-            break
-        except Exception as e:
-            console.print(f"[bold red]Ocorreu um erro inesperado:[/bold red] {e}")
-
-    console.print("\n[bold]Soli Deo Gloria![/bold]")
-
-@click.command()
-def cli():
-    """Ferramenta devocional Cyber-Puritano."""
-    run_interactive_mode()
-
-### FILE: ./app/core/bible_parser.py ###
+-e 
+Arquivo: ./app/core/bible_parser.py
 import re
 from app.core.config import LIVROS_E_ABREVIACOES
 
@@ -121,53 +376,11 @@ def parse_references(text: str) -> list[dict]:
             })
             
     return found_references
+-e 
+--- Fim do arquivo ./app/core/bible_parser.py ---
 
-### FILE: ./app/core/config.py ###
-import os
-
-# --- Gestão de Caminhos ---
-APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_ROOT = os.path.dirname(APP_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
-
-# --- Arquivos de Dados ---
-# Apontando para os novos bancos de dados centralizados
-DB_BIBLIA_PATH = os.path.join(DATA_DIR, 'Biblia.sqlite')
-DB_DADOS_PATH = os.path.join(DATA_DIR, 'dados.db')
-
-# --- Configurações da Aplicação ---
-VERSAO_BIBLIA_PADRAO = "NAA"
-VERSOES_BIBLIA_DISPONIVEIS = ["NAA", "ARA", "NVI"] # Manter para o seletor da UI
-
-# --- Constantes da Bíblia ---
-LIVROS_E_ABREVIACOES = [
-    ("Gênesis", "Gn"), ("Êxodo", "Ex"), ("Levítico", "Lv"), ("Números", "Nm"),
-    ("Deuteronômio", "Dt"), ("Josué", "Js"), ("Juízes", "Jz"), ("Rute", "Rt"),
-    ("1 Samuel", "1Sm"), ("2 Samuel", "2Sm"), ("1 Reis", "1Rs"), ("2 Reis", "2Rs"),
-    ("1 Crônicas", "1Cr"), ("2 Crônicas", "2Cr"), ("Esdras", "Ed"), ("Neemias", "Ne"),
-    ("Ester", "Et"), ("Jó", "Jó"), ("Salmos", "Sl"), ("Provérbios", "Pv"),
-    ("Eclesiastes", "Ec"), ("Cantares", "Ct"), ("Isaías", "Is"), ("Jeremias", "Jr"),
-    ("Lamentações", "Lm"), ("Ezequiel", "Ez"), ("Daniel", "Dn"), ("Oséias", "Os"),
-    ("Joel", "Jl"), ("Amós", "Am"), ("Obadias", "Ob"), ("Jonas", "Jn"),
-    ("Miquéias", "Mq"), ("Naum", "Na"), ("Habacuque", "Hc"), ("Sofonias", "Sf"),
-    ("Ageu", "Ag"), ("Zacarias", "Zc"), ("Malaquias", "Ml"), ("Mateus", "Mt"),
-    ("Marcos", "Mc"), ("Lucas", "Lc"), ("João", "Jo"), ("Atos", "At"),
-    ("Romanos", "Rm"), ("1 Coríntios", "1Co"), ("2 Coríntios", "2Co"), ("Gálatas", "Gl"),
-    ("Efésios", "Ef"), ("Filipenses", "Fp"), ("Colossenses", "Cl"),
-    ("1 Tessalonicenses", "1Ts"), ("2 Tessalonicenses", "2Ts"), ("1 Timóteo", "1Tm"),
-    ("2 Timóteo", "2Tm"), ("Tito", "Tt"), ("Filemom", "Fm"), ("Hebreus", "Hb"),
-    ("Tiago", "Tg"), ("1 Pedro", "1Pe"), ("2 Pedro", "2Pe"), ("1 João", "1Jo"),
-    ("2 João", "2Jo"), ("3 João", "3Jo"), ("Judas", "Jd"), ("Apocalipse", "Ap")
-]
-MAPA_ABREVIACOES = {abrev.lower(): nome for nome, abrev in LIVROS_E_ABREVIACOES}
-
-# Adicione esta linha em config.py
-CALENDARIO_SEMANAL = {
-    1: "Dia de Reunião de Oração",  # Terça-feira (Monday is 0)
-    3: "Dia de Estudo de Doutrina", # Quinta-feira
-}
-
-### FILE: ./app/core/data_models.py ###
+-e 
+Arquivo: ./app/core/data_models.py
 # app/core/data_models.py
 from dataclasses import dataclass
 from typing import Optional
@@ -191,8 +404,11 @@ class Resolution:
     category: Optional[str]
     created_at: Optional[str]
     last_reviewed_at: Optional[str]
-    review_count: int
-### FILE: ./app/core/db.py ###
+    review_count: int-e 
+--- Fim do arquivo ./app/core/data_models.py ---
+
+-e 
+Arquivo: ./app/core/db.py
 # app/core/db.py
 import sqlite3
 
@@ -218,8 +434,11 @@ def get_bible_db_connection():
     conn = sqlite3.connect(BIBLE_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+-e 
+--- Fim do arquivo ./app/core/db.py ---
 
-### FILE: ./app/core/theme.py ###
+-e 
+Arquivo: ./app/core/theme.py
 # app/core/theme.py
 from rich.console import Console
 from rich.theme import Theme
@@ -234,8 +453,45 @@ custom_theme = Theme({
 })
 
 console = Console(theme=custom_theme)
+-e 
+--- Fim do arquivo ./app/core/theme.py ---
 
-### FILE: ./app/models/action_item_model.py ###
+-e 
+Arquivo: ./app/models/journal_model.py
+# app/models/journal_model.py
+import sqlite3
+from app.core.db import get_db_connection
+
+def add_entry(entry_date: str, content: str, tags: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO journal (entry_date, content, tags) VALUES (?, ?, ?)",
+        (entry_date, content, tags)
+    )
+    conn.commit()
+    conn.close()
+
+def get_entries_by_tag(tag: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM journal WHERE tags LIKE ? ORDER BY entry_date DESC", (f'%{tag}%',))
+    entries = cursor.fetchall()
+    conn.close()
+    return entries
+
+def get_all_entries():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM journal ORDER BY entry_date DESC")
+    entries = cursor.fetchall()
+    conn.close()
+    return entries
+-e 
+--- Fim do arquivo ./app/models/journal_model.py ---
+
+-e 
+Arquivo: ./app/models/action_item_model.py
 # app/models/action_item_model.py
 import sqlite3
 from app.core.db import get_db_connection
@@ -267,8 +523,84 @@ def update_item_status(item_id: int, new_status: str, updated_at: str):
     )
     conn.commit()
     conn.close()
+-e 
+--- Fim do arquivo ./app/models/action_item_model.py ---
 
-### FILE: ./app/models/bible.py ###
+-e 
+Arquivo: ./app/models/symbols.py
+# app/models/symbols.py
+from app.core.db import get_db_connection
+
+def get_cfw_article(chapter: int, section: int):
+    """Busca um artigo da Confissão de Fé de Westminster."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM cfw_articles WHERE chapter = ? AND section = ?", 
+        (chapter, section)
+    )
+    article = cursor.fetchone()
+    conn.close()
+    return article
+
+def get_cmw_question(question_id: int):
+    """Busca uma pergunta do Catecismo Maior de Westminster."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM cmw WHERE id = ?", (question_id,))
+    question = cursor.fetchone()
+    conn.close()
+    return question
+
+def get_bcw_question(question_id: int):
+    """Busca uma pergunta do Breve Catecismo de Westminster."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM bcw WHERE id = ?", (question_id,))
+    question = cursor.fetchone()
+    conn.close()
+    return question
+-e 
+--- Fim do arquivo ./app/models/symbols.py ---
+
+-e 
+Arquivo: ./app/models/notes_model.py
+# app/models/notes_model.py
+from app.core.db import get_db_connection
+
+def add_note(title: str, content: str, tags: str, created_at: str):
+    """Adiciona uma nova nota de estudo."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO notes (title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        (title, content, tags, created_at, created_at)
+    )
+    conn.commit()
+    conn.close()
+
+def get_all_notes():
+    """Retorna todas as notas."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, tags, created_at FROM notes ORDER BY updated_at DESC")
+    notes = cursor.fetchall()
+    conn.close()
+    return notes
+
+def get_note_by_id(note_id: int):
+    """Busca uma nota completa pelo ID."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+    note = cursor.fetchone()
+    conn.close()
+    return note
+-e 
+--- Fim do arquivo ./app/models/notes_model.py ---
+
+-e 
+Arquivo: ./app/models/bible.py
 # app/models/bible.py
 from app.core.db import get_bible_db_connection
 
@@ -307,72 +639,11 @@ def get_all_book_names():
     books = cursor.fetchall()
     conn.close()
     return books
+-e 
+--- Fim do arquivo ./app/models/bible.py ---
 
-### FILE: ./app/models/journal_model.py ###
-# app/models/journal_model.py
-import sqlite3
-from app.core.db import get_db_connection
-
-def add_entry(entry_date: str, content: str, tags: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO journal (entry_date, content, tags) VALUES (?, ?, ?)",
-        (entry_date, content, tags)
-    )
-    conn.commit()
-    conn.close()
-
-def get_entries_by_tag(tag: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM journal WHERE tags LIKE ? ORDER BY entry_date DESC", (f'%{tag}%',))
-    entries = cursor.fetchall()
-    conn.close()
-    return entries
-
-def get_all_entries():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM journal ORDER BY entry_date DESC")
-    entries = cursor.fetchall()
-    conn.close()
-    return entries
-
-### FILE: ./app/models/notes_model.py ###
-# app/models/notes_model.py
-from app.core.db import get_db_connection
-
-def add_note(title: str, content: str, tags: str, created_at: str):
-    """Adiciona uma nova nota de estudo."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO notes (title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (title, content, tags, created_at, created_at)
-    )
-    conn.commit()
-    conn.close()
-
-def get_all_notes():
-    """Retorna todas as notas."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, title, tags, created_at FROM notes ORDER BY updated_at DESC")
-    notes = cursor.fetchall()
-    conn.close()
-    return notes
-
-def get_note_by_id(note_id: int):
-    """Busca uma nota completa pelo ID."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
-    note = cursor.fetchone()
-    conn.close()
-    return note
-
-### FILE: ./app/models/psaltery.py ###
+-e 
+Arquivo: ./app/models/psaltery.py
 # app/models/psaltery.py
 from app.core.db import get_db_connection
 
@@ -398,98 +669,11 @@ def get_all_psalms_references():
     references = cursor.fetchall()
     conn.close()
     return references
+-e 
+--- Fim do arquivo ./app/models/psaltery.py ---
 
-### FILE: ./app/models/symbols.py ###
-# app/models/symbols.py
-from app.core.db import get_db_connection
-
-def get_cfw_article(chapter: int, section: int):
-    """Busca um artigo da Confissão de Fé de Westminster."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM cfw_articles WHERE chapter = ? AND section = ?", 
-        (chapter, section)
-    )
-    article = cursor.fetchone()
-    conn.close()
-    return article
-
-def get_cmw_question(question_id: int):
-    """Busca uma pergunta do Catecismo Maior de Westminster."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM cmw WHERE id = ?", (question_id,))
-    question = cursor.fetchone()
-    conn.close()
-    return question
-
-def get_bcw_question(question_id: int):
-    """Busca uma pergunta do Breve Catecismo de Westminster."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM bcw WHERE id = ?", (question_id,))
-    question = cursor.fetchone()
-    conn.close()
-    return question
-
-### FILE: ./app/reports/metrics.py ###
-# app/reports/metrics.py
-from collections import Counter
-from datetime import datetime, timedelta
-from rich.panel import Panel
-from rich.table import Table
-from app.core.theme import console
-from app.models import journal_model, action_item_model
-
-def generate_weekly_report():
-    """
-    Gera e exibe um relatório de métricas devocionais da última semana.
-    """
-    console.print(Panel("[bold cyan]Relatório Devocional Semanal[/bold cyan]", expand=False))
-
-    # 1. Análise do Diário (Journal)
-    entries = journal_model.get_all_entries()
-    today = datetime.now()
-    one_week_ago = today - timedelta(days=7)
-    
-    recent_entries = [e for e in entries if datetime.strptime(e['entry_date'], '%Y-%m-%d %H:%M:%S') > one_week_ago]
-    
-    console.print(f"\n[info]Diário:[/info]")
-    console.print(f" - Você escreveu [bold green]{len(recent_entries)}[/bold green] entradas nos últimos 7 dias.")
-
-    # Análise de Tags
-    all_tags = []
-    for entry in recent_entries:
-        tags = [tag.strip() for tag in entry['tags'].split(',') if tag.strip()]
-        all_tags.extend(tags)
-    
-    if all_tags:
-        tag_counts = Counter(all_tags)
-        most_common_tags = tag_counts.most_common(3)
-        tags_str = ", ".join([f"'{tag}' ({count}x)" for tag, count in most_common_tags])
-        console.print(f" - Suas tags mais comuns na semana foram: [yellow]{tags_str}[/yellow].")
-
-    # 2. Análise das Ações (Actions)
-    console.print(f"\n[info]Ações:[/info]")
-    
-    # Resoluções
-    resolutions = action_item_model.get_items('Resolução')
-    active_resolutions = [r for r in resolutions if r['status'] == 'Ativo']
-    console.print(f" - Você tem [bold green]{len(active_resolutions)}[/bold green] resoluções ativas.")
-    
-    # Pedidos de Oração
-    prayers = action_item_model.get_items('Pedido de Oração')
-    active_prayers = [p for p in prayers if p['status'] == 'Ativo']
-    answered_prayers_total = len(prayers) - len(active_prayers)
-    
-    console.print(f" - Você tem [bold green]{len(active_prayers)}[/bold green] pedidos de oração ativos.")
-    if answered_prayers_total > 0:
-        console.print(f" - Deus já respondeu a [bold green]{answered_prayers_total}[/bold green] orações registradas!")
-
-    console.print("\n[italic]Continue perseverando na piedade, pois \"o exercício físico para pouco é proveitoso, mas a piedade para tudo é proveitosa\" (1 Timóteo 4:8).[/italic]")
-
-### FILE: ./app/ui/actions.py ###
+-e 
+Arquivo: ./app/ui/actions_old.py
 # app/ui/actions.py
 import os
 import re
@@ -822,8 +1006,1103 @@ COMMAND_MAP = {
     "reports": lambda args: metrics.generate_weekly_report(),
     "clear": lambda args: _clear_screen()
 }
+-e 
+--- Fim do arquivo ./app/ui/actions_old.py ---
 
-### FILE: ./main.py ###
+-e 
+Arquivo: ./app/ui/icons.py
+# app/ui/icons.py
+# Ícones e símbolos temáticos (requer Nerd Fonts)
+
+#  e  são separadores de "powerline"
+HEADER_LEFT = ""
+HEADER_RIGHT = ""
+
+# Ícones principais
+BOOK = "󰂺"       # Um livro aberto
+CROSS = "󰙠"       # Cruz Celta/Reformada
+SCROLL = "󰦘"      # Pergaminho/Documento
+PRAY = "󰯓"       # Mãos em oração
+PEN = "󰏫"        # Pena de escrever (para o Diário)
+PSALM = "󰎄"      # Harpa/Lira (para o Saltério)
+ACTION = "󰓩"      # Alvo/Resolução
+REPORT = "󰠨"     # Gráfico/Relatório
+HELP = "󰋗"       # Ponto de interrogação em círculo
+
+# Símbolos de UI
+PROMPT = "❯"
+SELECTED = "▶"
+SPINNER = "dots"
+-e 
+--- Fim do arquivo ./app/ui/icons.py ---
+
+-e 
+Arquivo: ./app/ui/actions.py
+# app/ui/actions.py
+import os
+import re
+import subprocess
+from datetime import datetime
+from rich.panel import Panel
+from rich.table import Table
+from rich.markup import escape
+from app.core.theme import console
+from app.models import journal_model, action_item_model, notes_model, bible, symbols, psaltery
+from app.core.config import DATA_DIR
+from app.reports import metrics
+
+SESSION_STATE = {'versao_biblia': 'NAA'}
+
+BIBLE_ABBREVIATIONS = {
+    'gn': 'Gênesis', 'ex': 'Êxodo', 'lv': 'Levítico', 'nm': 'Números', 'dt': 'Deuteronômio',
+    'js': 'Josué', 'jz': 'Juízes', 'rt': 'Rute', '1sm': '1 Samuel', '2sm': '2 Samuel',
+    '1rs': '1 Reis', '2rs': '2 Reis', '1cr': '1 Crônicas', '2cr': '2 Crônicas', 'ed': 'Esdras',
+    'ne': 'Neemias', 'et': 'Ester', 'jó': 'Jó', 'sl': 'Salmos', 'pv': 'Provérbios',
+    'ec': 'Eclesiastes', 'ct': 'Cantares', 'is': 'Isaías', 'jr': 'Jeremias', 'lm': 'Lamentações',
+    'ez': 'Ezequiel', 'dn': 'Daniel', 'os': 'Oséias', 'jl': 'Joel', 'am': 'Amós', 'ob': 'Obadias',
+    'jn': 'Jonas', 'mq': 'Miquéias', 'na': 'Naum', 'hc': 'Habacuque', 'sf': 'Sofonias', 'ag': 'Ageu',
+    'zc': 'Zacarias', 'ml': 'Malaquias', 'mt': 'Mateus', 'mc': 'Marcos', 'lc': 'Lucas',
+    'jo': 'João', 'at': 'Atos', 'rm': 'Romanos', '1co': '1 Coríntios', '2co': '2 Coríntios',
+    'gl': 'Gálatas', 'ef': 'Efésios', 'fp': 'Filipenses', 'cl': 'Colossenses',
+    '1ts': '1 Tessalonicenses', '2ts': '2 Tessalonicenses', '1tm': '1 Timóteo',
+    '2tm': '2 Timóteo', 'tt': 'Tito', 'fm': 'Filemom', 'hb': 'Hebreus', 'tg': 'Tiago',
+    '1pe': '1 Pedro', '2pe': '2 Pedro', '1jo': '1 João', '2jo': '2 João', '3jo': '3 João',
+    'jd': 'Judas', 'ap': 'Apocalipse'
+}
+
+def _clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def _parse_reference(ref_string: str):
+    pattern_ch_vs = re.compile(r'^\s*([1-3]?\s*.*?)\s*(\d+):(\d+)(?:-(\d+))?\s*$')
+    match = pattern_ch_vs.match(ref_string)
+    if match:
+        groups = match.groups()
+        return groups[0].strip(), int(groups[1]), int(groups[2]), int(groups[3]) if groups[3] else None
+    pattern_vs_only = re.compile(r'^\s*([1-3]?\s*.*?)\s*(\d+)(?:-(\d+))?\s*$')
+    match = pattern_vs_only.match(ref_string)
+    if match:
+        groups = match.groups()
+        return groups[0].strip(), 1, int(groups[1]), int(groups[2]) if groups[2] else None
+    return None
+
+def _handle_help(args):
+    table = Table(title="Ajuda - Comandos Cyber-Puritano", style="titulo")
+    table.add_column("Comando", style="info", no_wrap=True); table.add_column("Alias", style="yellow"); table.add_column("Descrição", style="white")
+    table.add_row("journal", "j", "Diário. Subcomandos: add, view, find <tag>.")
+    table.add_row("actions", "a", "Ações. Subcomandos: add, view, update. Tipos: res, ora.")
+    table.add_row("notes", "n", "Notas de Estudo. Subcomandos: add, view, read <id>.")
+    table.add_row("bible", "b", "Bíblia. Ex: 'b jo 3:16-18', 'b Judas 3', 'b list'.")
+    table.add_row("symbols", "s", "Símbolos de Fé. Ex: 's cfw 1.1', 's cmw 10'.")
+    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A [view|meta|letra|play [i|c]]', 'p list'.")
+    table.add_row("reports", "rep", "Exibe um relatório de métricas da última semana.")
+    table.add_row("clear", "cls", "Limpa a tela.")
+    table.add_row("exit", "q", "Sai da aplicação.")
+    console.print(table)
+
+def _handle_journal(args):
+    if not args or args[0] not in ['add', 'view', 'find']: console.print("[erro]Uso: journal [add|view|find <tag>]"); return
+    sub_cmd = args[0]
+    if sub_cmd == 'add':
+        console.print("[info]Escreva sua entrada no diário. Pressione Ctrl+D (Linux/Mac) ou Ctrl+Z+Enter (Windows) quando terminar.")
+        content = "\n".join(iter(lambda: input(), ''));
+        if not content.strip(): console.print("[warning]Entrada vazia. Nada foi salvo."); return
+        tags = console.input("Tags (separadas por vírgula): ")
+        journal_model.add_entry(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content, tags)
+        console.print("[info]Entrada salva com sucesso!")
+    elif sub_cmd == 'view':
+        entries = journal_model.get_all_entries()
+        for entry in entries: console.print(Panel(escape(entry['content']), title=f"[titulo]{entry['entry_date']}[/titulo] | Tags: [yellow]{entry['tags']}[/yellow]", border_style="cyan"))
+    elif sub_cmd == 'find':
+        if len(args) < 2: console.print("[erro]Uso: journal find <tag>"); return
+        tag = args[1]
+        entries = journal_model.get_entries_by_tag(tag)
+        for entry in entries: console.print(Panel(escape(entry['content']), title=f"[titulo]{entry['entry_date']}[/titulo] | Tags: [yellow]{entry['tags']}[/yellow]", border_style="cyan"))
+
+def _handle_actions(args):
+    if len(args) < 2 or args[0] not in ['add', 'view', 'update'] or args[1] not in ['res', 'ora']: console.print("[erro]Uso: actions [add|view|update] [res|ora] [argumentos...]"); return
+    sub_cmd, item_type_arg = args[0], args[1]
+    item_type = 'Resolução' if item_type_arg == 'res' else 'Pedido de Oração'
+    if sub_cmd == 'add':
+        text = " ".join(args[2:]);
+        if not text: text = console.input(f"Texto para nova {item_type}: ")
+        if not text.strip(): console.print("[warning]Texto vazio. Nada foi salvo."); return
+        action_item_model.add_item(item_type, text, datetime.now().strftime('%Y-%m-%d %H:%M:%S')); console.print(f"[info]{item_type} adicionada com sucesso!")
+    elif sub_cmd == 'view':
+        items = action_item_model.get_items(item_type); table = Table(title=f"Lista de {item_type}s")
+        table.add_column("ID", style="cyan"); table.add_column("Texto", style="white"); table.add_column("Status", style="yellow")
+        for item in items: table.add_row(str(item['id']), item['text'], item['status'])
+        console.print(table)
+    elif sub_cmd == 'update':
+        try:
+            item_id = int(args[2]); new_status = args[3]
+            action_item_model.update_item_status(item_id, new_status, datetime.now().strftime('%Y-%m-%d %H:%M:%S')); console.print(f"[info]Status do item {item_id} atualizado para '{new_status}'.")
+        except (IndexError, ValueError): console.print("[erro]Uso: actions update [res|ora] <id> <novo_status>")
+
+def _handle_notes(args):
+    if not args or args[0] not in ['add', 'view', 'read']: console.print("[erro]Uso: notes [add|view|read <id>]"); return
+    sub_cmd = args[0]
+    if sub_cmd == 'add':
+        title = console.input("Título da nota: ")
+        if not title.strip(): console.print("[warning]Título vazio. Operação cancelada."); return
+        console.print("[info]Conteúdo da nota (Ctrl+D/Ctrl+Z+Enter para terminar):")
+        content = "\n".join(iter(lambda: input(), ''))
+        if not content.strip(): console.print("[warning]Conteúdo vazio. Nada foi salvo."); return
+        tags = console.input("Tags (separadas por vírgula): ")
+        notes_model.add_note(title, content, tags, datetime.now().strftime('%Y-%m-%d %H:%M:%S')); console.print("[info]Nota salva com sucesso!")
+    elif sub_cmd == 'view':
+        notes = notes_model.get_all_notes(); table = Table(title="Notas de Estudo (Commonplace Book)")
+        table.add_column("ID", style="cyan"); table.add_column("Título", style="white"); table.add_column("Tags", style="yellow")
+        for note in notes: table.add_row(str(note['id']), note['title'], note['tags'])
+        console.print(table)
+    elif sub_cmd == 'read':
+        try:
+            note_id = int(args[1]); note = notes_model.get_note_by_id(note_id)
+            if note: console.print(Panel(escape(note['content']), title=f"[titulo]{note['title']}[/titulo] | Tags: [yellow]{note['tags']}[/yellow]", border_style="cyan"))
+            else: console.print("[erro]Nota não encontrada.")
+        except (IndexError, ValueError): console.print("[erro]Uso: notes read <id>")
+
+def _handle_bible(args):
+    if not args: console.print("[erro]Uso: 'b <referência>' ou 'b list'."); return
+    if args[0].lower() == 'list':
+        books = bible.get_all_book_names()
+        table = Table(title="Livros da Bíblia e Abreviações Comuns")
+        table.add_column("Livro", style="white"); table.add_column("Abrev.", style="yellow")
+        abbrev_map = {v: k for k, v in BIBLE_ABBREVIATIONS.items()}
+        # Ajustado para layout de duas colunas
+        num_books = len(books)
+        mid_point = (num_books + 1) // 2
+        for i in range(mid_point):
+            book1_name = books[i]['name']
+            abbrev1 = abbrev_map.get(book1_name, "-")
+            col1 = f"{book1_name} ({abbrev1})"
+            
+            col2 = ""
+            if i + mid_point < num_books:
+                book2_name = books[i + mid_point]['name']
+                abbrev2 = abbrev_map.get(book2_name, "-")
+                col2 = f"{book2_name} ({abbrev2})"
+            table.add_row(col1, col2)
+        console.print(table)
+        return
+    ref_string = " ".join(args)
+    parsed_ref = _parse_reference(ref_string)
+    if not parsed_ref: console.print("[erro]Formato de referência inválido. Use 'Livro Cap:Ver' ou 'Livro Ver'."); return
+    book_input, chapter, start_verse, end_verse = parsed_ref
+    book_full_name = BIBLE_ABBREVIATIONS.get(book_input.lower().replace(" ", ""))
+    if not book_full_name:
+        if book_input.title() in BIBLE_ABBREVIATIONS.values():
+            book_full_name = book_input.title()
+        else:
+            console.print(f"[erro]Livro '{book_input}' não reconhecido. Use 'b list' para ver as opções.[/erro]"); return
+    verses = bible.get_verses(book_full_name, chapter, start_verse, end_verse)
+    if not verses: console.print("[erro]Referência não encontrada. Verifique o capítulo e os versículos."); return
+    console.print(f"\n[titulo]--- {book_full_name} {chapter} ---[/titulo]")
+    for verse in verses: console.print(f"[yellow][{verse['verse']}][/yellow] {escape(verse['text'])}")
+
+def _handle_symbols(args):
+    if not args: console.print("[erro]Uso: symbols [cfw|cmw|bcw] [referência]"); return
+    doc = args[0].lower(); ref = " ".join(args[1:])
+    if doc == 'cfw':
+        try:
+            chap, sec = map(int, ref.split('.')); article = symbols.get_cfw_article(chap, sec)
+            if article: console.print(Panel(escape(article['text']), title=f"[titulo]CFW {chap}.{sec}: {article['title']}[/titulo]"))
+            else: console.print("[erro]Artigo não encontrado.")
+        except ValueError: console.print("[erro]Formato para CFW é 'capitulo.secao'.")
+    elif doc in ['cmw', 'bcw']:
+        try:
+            qid = int(ref); q_func = symbols.get_cmw_question if doc == 'cmw' else symbols.get_bcw_question
+            q = q_func(qid)
+            if q: console.print(Panel(f"[info]P:[/info] {escape(q['question'])}\n\n[info]R:[/info] {escape(q['answer'])}", title=f"[titulo]{doc.upper()} Pergunta {qid}[/titulo]"))
+            else: console.print("[erro]Pergunta não encontrada.")
+        except ValueError: console.print("[erro]Referência para catecismos deve ser um número.")
+    else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
+
+# ============================================================================
+# (CORRIGIDO) HANDLER DO SALTÉRIO COM ACESSO CORRETO A DADOS E QUERY CORRIGIDA
+# ============================================================================
+def _handle_psaltery(args):
+    if not args or args[0].lower() == 'list':
+        all_psalms = psaltery.get_all_psalms_references()
+        
+        table = Table(title="Saltério - Lista de Salmos")
+        table.add_column("Referência", style="cyan", no_wrap=True)
+        table.add_column("Música", style="yellow", justify="center")
+        
+        if not all_psalms:
+            console.print("[warning]Nenhum salmo encontrado na base de dados.[/warning]")
+            return
+
+        def sort_key(p):
+            match = re.match(r'(\d+)([A-Z]*)', p['referencia'])
+            if match:
+                num, letter = match.groups()
+                return int(num), letter
+            return 999, p['referencia'] 
+
+        sorted_psalms = sorted(all_psalms, key=sort_key)
+        
+        last_psalm_num = -1
+        for psalm in sorted_psalms:
+            current_psalm_num = sort_key(psalm)[0]
+            if last_psalm_num != -1 and current_psalm_num != last_psalm_num:
+                table.add_row("──────────", "──", style="dim")
+            last_psalm_num = current_psalm_num
+            
+            # (CORRIGIDO) Acesso aos dados usando colchetes e verificação de existência da chave
+            music_indicator = ""
+            has_instrumental = 'instrumental' in psalm.keys() and psalm['instrumental']
+            has_capela = 'à_capela' in psalm.keys() and psalm['à_capela']
+            
+            if has_instrumental and has_capela:
+                music_indicator = "A"
+            elif has_instrumental:
+                music_indicator = "I"
+            elif has_capela:
+                music_indicator = "C"
+
+            table.add_row(psalm['referencia'], music_indicator)
+            
+        console.print(table)
+        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos[/info]")
+        return
+
+    referencia = args[0].upper()
+    sub_cmd = args[1].lower() if len(args) > 1 else 'view'
+    psalm = psaltery.get_psalm_by_reference(referencia)
+
+    if not psalm:
+        console.print(f"[erro]Salmo com referência '{referencia}' não encontrado.")
+        return
+
+    def show_meta():
+        table = Table(title=f"Metadados do Salmo {psalm['referencia']}", box=None, show_header=False)
+        table.add_column(style="info"); table.add_column(style="white")
+        table.add_row("Referência:", psalm['referencia']); table.add_row("Tipo:", psalm['tipo']); table.add_row("Métrica:", psalm['metrica']); table.add_row("Melodia:", psalm['melodia'])
+        table.add_row("Compositor:", psalm['compositor']); table.add_row("Harmonização:", psalm['harmonizacao']); console.print(table)
+
+    def show_letra():
+        console.print(f"\n[titulo]--- Salmo {psalm['referencia']} - Letra ---[/titulo]")
+        console.print(escape(psalm['letra']))
+
+    def play_music(psalm_data, requested_version=None):
+        options = []
+        if psalm_data['instrumental']: options.append(("Instrumental", psalm_data['instrumental']))
+        if psalm_data['à_capela']: options.append(("À Capela", psalm_data['à_capela']))
+
+        if not options:
+            console.print(f"[warning]O Salmo {referencia} não possui áudio cadastrado.[/warning]")
+            return
+
+        chosen_path = ""
+        if requested_version:
+            if requested_version in ["instrumental", "i"]:
+                path = next((p for name, p in options if name == "Instrumental"), None)
+                if path: chosen_path = path
+                else: console.print("[erro]Versão instrumental não disponível para este salmo.[/erro]"); return
+            elif requested_version in ["capela", "c"]:
+                path = next((p for name, p in options if name == "À Capela"), None)
+                if path: chosen_path = path
+                else: console.print("[erro]Versão à capela não disponível para este salmo.[/erro]"); return
+        
+        if not chosen_path:
+            if len(options) == 1:
+                chosen_path = options[0][1]
+                console.print(f"[info]Tocando a única versão disponível: {options[0][0]}[/info]")
+            else:
+                console.print("[prompt]Qual versão deseja ouvir?[/prompt]")
+                for i, (name, _) in enumerate(options): console.print(f"  [cyan]({i+1})[/cyan] {name}")
+                while True:
+                    choice_str = console.input("[prompt]Sua escolha (ou 'q' para sair): [/prompt]")
+                    if choice_str.lower() in ['q', 'sair']: return
+                    try:
+                        choice_idx = int(choice_str)
+                        if 1 <= choice_idx <= len(options):
+                            chosen_path = options[choice_idx - 1][1]
+                            break
+                        else: console.print("[erro]Escolha inválida.[/erro]")
+                    except ValueError: console.print("[erro]Por favor, insira um número.[/erro]")
+        
+        full_path = os.path.join(DATA_DIR, chosen_path)
+
+        if not os.path.exists(full_path):
+            console.print(f"[erro]Arquivo de áudio não encontrado em: {full_path}[/erro]")
+            return
+            
+        process = None
+        try:
+            console.print(f"[info]Iniciando mpv...[/info]")
+            process = subprocess.Popen(['mpv', full_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            console.input("[prompt]Tocando... Pressione Enter para parar.[/prompt]")
+        except FileNotFoundError:
+            console.print("[erro]Comando 'mpv' não encontrado. Instale o mpv para usar esta função.[/erro]")
+        except Exception as e:
+            console.print(f"[erro]Ocorreu um erro inesperado ao tentar tocar: {e}[/erro]")
+        finally:
+            if process and process.poll() is None:
+                console.print("[info]Parando a reprodução.[/info]")
+                process.terminate()
+
+    if sub_cmd == 'view': show_meta(); show_letra()
+    elif sub_cmd == 'meta': show_meta()
+    elif sub_cmd == 'letra': show_letra()
+    elif sub_cmd == 'play':
+        requested_version_arg = args[2].lower() if len(args) > 2 else None
+        play_music(psalm, requested_version=requested_version_arg)
+    elif sub_cmd == 'all':
+        show_meta(); show_letra()
+        if psalm['instrumental'] or psalm['à_capela']:
+            console.input("\n[prompt]Pressione Enter para ver as opções de áudio...[/prompt]")
+            play_music(psalm)
+    else:
+        console.print(f"[erro]Subcomando '{sub_cmd}' inválido. Use [view|meta|letra|play|all].")
+
+
+# --- MAPA DE COMANDOS ---
+COMMAND_MAP = {
+    "help": _handle_help,
+    "journal": _handle_journal,
+    "actions": _handle_actions,
+    "notes": _handle_notes,
+    "bible": _handle_bible,
+    "symbols": _handle_symbols,
+    "psaltery": _handle_psaltery,
+    "reports": lambda args: metrics.generate_weekly_report(),
+    "clear": lambda args: _clear_screen()
+}
+-e 
+--- Fim do arquivo ./app/ui/actions.py ---
+
+-e 
+Arquivo: ./app/reports/metrics.py
+# app/reports/metrics.py
+from collections import Counter
+from datetime import datetime, timedelta
+from rich.panel import Panel
+from rich.table import Table
+from app.core.theme import console
+from app.models import journal_model, action_item_model
+
+def generate_weekly_report():
+    """
+    Gera e exibe um relatório de métricas devocionais da última semana.
+    """
+    console.print(Panel("[bold cyan]Relatório Devocional Semanal[/bold cyan]", expand=False))
+
+    # 1. Análise do Diário (Journal)
+    entries = journal_model.get_all_entries()
+    today = datetime.now()
+    one_week_ago = today - timedelta(days=7)
+    
+    recent_entries = [e for e in entries if datetime.strptime(e['entry_date'], '%Y-%m-%d %H:%M:%S') > one_week_ago]
+    
+    console.print(f"\n[info]Diário:[/info]")
+    console.print(f" - Você escreveu [bold green]{len(recent_entries)}[/bold green] entradas nos últimos 7 dias.")
+
+    # Análise de Tags
+    all_tags = []
+    for entry in recent_entries:
+        tags = [tag.strip() for tag in entry['tags'].split(',') if tag.strip()]
+        all_tags.extend(tags)
+    
+    if all_tags:
+        tag_counts = Counter(all_tags)
+        most_common_tags = tag_counts.most_common(3)
+        tags_str = ", ".join([f"'{tag}' ({count}x)" for tag, count in most_common_tags])
+        console.print(f" - Suas tags mais comuns na semana foram: [yellow]{tags_str}[/yellow].")
+
+    # 2. Análise das Ações (Actions)
+    console.print(f"\n[info]Ações:[/info]")
+    
+    # Resoluções
+    resolutions = action_item_model.get_items('Resolução')
+    active_resolutions = [r for r in resolutions if r['status'] == 'Ativo']
+    console.print(f" - Você tem [bold green]{len(active_resolutions)}[/bold green] resoluções ativas.")
+    
+    # Pedidos de Oração
+    prayers = action_item_model.get_items('Pedido de Oração')
+    active_prayers = [p for p in prayers if p['status'] == 'Ativo']
+    answered_prayers_total = len(prayers) - len(active_prayers)
+    
+    console.print(f" - Você tem [bold green]{len(active_prayers)}[/bold green] pedidos de oração ativos.")
+    if answered_prayers_total > 0:
+        console.print(f" - Deus já respondeu a [bold green]{answered_prayers_total}[/bold green] orações registradas!")
+
+    console.print("\n[italic]Continue perseverando na piedade, pois \"o exercício físico para pouco é proveitoso, mas a piedade para tudo é proveitosa\" (1 Timóteo 4:8).[/italic]")
+-e 
+--- Fim do arquivo ./app/reports/metrics.py ---
+
+-e 
+Arquivo: ./app/cli/command_parser.py
+# app/cli/command_parser.py
+DEFAULT_ALIASES = {
+    "j": "journal",      # Diário (journal)
+    "a": "actions",      # Ações (resoluções e orações)
+    "n": "notes",        # Notas (commonplace book)
+    "b": "bible",        # Bíblia
+    "s": "symbols",      # Símbolos de Fé
+    "p": "psaltery",     # Saltério
+    "rep": "reports",
+    "h": "help",
+    "q": "exit",
+    "cls": "clear"
+}
+
+ALIASES = DEFAULT_ALIASES
+
+def parse(raw: str) -> dict | None:
+    """Recebe a linha do usuário e a transforma em um comando e argumentos."""
+    raw = raw.strip()
+    if not raw:
+        return None
+
+    parts = raw.split()
+    cmd_or_alias = parts[0].lower()
+    command = ALIASES.get(cmd_or_alias, cmd_or_alias)
+
+    return {"cmd": command, "args": parts[1:]}
+-e 
+--- Fim do arquivo ./app/cli/command_parser.py ---
+
+-e 
+Arquivo: ./app/cli/__init__.py
+# app/cli/__init__.py
+import click
+from rich.prompt import Prompt
+from app.core.theme import console
+from .command_parser import parse 
+from app.ui.actions import COMMAND_MAP, SESSION_STATE # Importa do novo local
+
+def run_interactive_mode():
+    """Inicia o loop principal da aplicação no modo interativo."""
+    console.clear()
+    console.print("[bold cyan]Cyber-Puritano[/bold cyan] | Soli Deo Gloria!")
+    console.print("Digite '[yellow]help[/yellow]' para ver os comandos ou '[yellow]q[/yellow]' para sair.")
+
+    while True:
+        try:
+            # console.print(render_status_panel()) # Se você tiver um painel de status
+            versao_biblia = SESSION_STATE.get('versao_biblia', 'NAA')
+            raw_input = Prompt.ask(f"[cyan]({versao_biblia})[/cyan] [prompt]>[/prompt]")
+            
+            parsed = parse(raw_input)
+            if not parsed: continue
+
+            cmd, args = parsed["cmd"], parsed["args"]
+            if cmd in ("exit", "q"): break
+            
+            if action := COMMAND_MAP.get(cmd):
+                action(args)
+            else:
+                console.print(f"[erro]Comando '{cmd}' não encontrado. Digite 'help'.[/erro]")
+
+        except (KeyboardInterrupt, EOFError):
+            break
+        except Exception as e:
+            console.print(f"[bold red]Ocorreu um erro inesperado:[/bold red] {e}")
+
+    console.print("\n[bold]Soli Deo Gloria![/bold]")
+
+@click.command()
+def cli():
+    """Ferramenta devocional Cyber-Puritano."""
+    run_interactive_mode()
+-e 
+--- Fim do arquivo ./app/cli/__init__.py ---
+
+-e 
+Arquivo: ./app/handlers/help_handler.py
+# app/handlers/help_handler.py
+from rich.table import Table
+
+def handle_help_command(args: list[str]):
+    """Cria e retorna a tabela de ajuda como um widget Rich."""
+    table = Table(title="Ajuda - Comandos Cyber-Puritano", style="#fabd2f")
+    table.add_column("Comando", style="info", no_wrap=True)
+    table.add_column("Alias", style="yellow")
+    table.add_column("Descrição", style="white")
+    table.add_row("journal", "j", "Diário. Subcomandos: view, find <tag>.")
+    table.add_row("actions", "a", "Ações. Subcomandos: view, update. Tipos: res, ora.")
+    table.add_row("notes", "n", "Notas de Estudo. Subcomandos: view, read <id>.")
+    table.add_row("bible", "b", "Bíblia. Ex: 'b jo 3:16-18'.")
+    table.add_row("symbols", "s", "Símbolos de Fé. Ex: 's cfw 1.1'.")
+    table.add_row("psaltery", "p", "Saltério. Ex: 'p 15A', 'p list', 'p 23 play'.")
+    table.add_row("reports", "rep", "Exibe um relatório de métricas da última semana.")
+    table.add_row("clear", "cls", "Limpa a tela de resultados.")
+    table.add_row("exit", "q", "Sai da aplicação.")
+    
+    # Nota sobre comandos de adição
+    table.add_row("\n[bold]Adicionar Entradas[/bold]", "", "[italic]Para adicionar no diário, notas ou ações, use um editor externo e gerencie o banco de dados diretamente. Uma futura versão terá telas de formulário.[/italic]")
+    
+    return table
+-e 
+--- Fim do arquivo ./app/handlers/help_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/journal_handler.py
+# app/handlers/journal_handler.py
+from rich.panel import Panel
+from rich.markup import escape
+from rich.console import Group
+from app.models import journal_model
+
+def handle_journal_command(args: list[str]):
+    if not args or args[0] not in ['view', 'find']:
+        return Panel("[bold red]Uso:[/bold red] journal [view|find <tag>]", border_style="red")
+
+    sub_cmd = args[0]
+    
+    if sub_cmd == 'view':
+        entries = journal_model.get_all_entries()
+        if not entries:
+            return Panel("[yellow]Nenhuma entrada no diário ainda.[/yellow]", border_style="yellow")
+        
+        panels = [Panel(escape(e['content']), title=f"[#fabd2f]{e['entry_date']}[/] | Tags: [#8ec07c]{e['tags']}[/]", border_style="cyan") for e in entries]
+        return Group(*panels)
+        
+    elif sub_cmd == 'find':
+        if len(args) < 2:
+            return Panel("[bold red]Uso:[/bold red] journal find <tag>", border_style="red")
+        tag = args[1]
+        entries = journal_model.get_entries_by_tag(tag)
+        if not entries:
+            return Panel(f"[yellow]Nenhuma entrada encontrada com a tag '{tag}'.[/yellow]", border_style="yellow")
+            
+        panels = [Panel(escape(e['content']), title=f"[#fabd2f]{e['entry_date']}[/] | Tags: [#8ec07c]{e['tags']}[/]", border_style="cyan") for e in entries]
+        return Group(*panels)
+-e 
+--- Fim do arquivo ./app/handlers/journal_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/actions_handler.py
+# app/handlers/actions_handler.py
+from datetime import datetime
+from rich.table import Table
+from rich.panel import Panel
+from app.models import action_item_model
+
+def handle_actions_command(args: list[str]):
+    if len(args) < 2 or args[0] not in ['view', 'update'] or args[1] not in ['res', 'ora']:
+        return Panel("[bold red]Uso:[/bold red] actions [view|update] [res|ora] [argumentos...]", border_style="red")
+
+    sub_cmd, item_type_arg = args[0], args[1]
+    item_type = 'Resolução' if item_type_arg == 'res' else 'Pedido de Oração'
+
+    if sub_cmd == 'view':
+        items = action_item_model.get_items(item_type)
+        table = Table(title=f"Lista de {item_type}s")
+        table.add_column("ID", style="cyan")
+        table.add_column("Texto", style="white")
+        table.add_column("Status", style="yellow")
+        for item in items:
+            table.add_row(str(item['id']), item['text'], item['status'])
+        return table
+        
+    elif sub_cmd == 'update':
+        try:
+            item_id = int(args[2])
+            new_status = args[3]
+            action_item_model.update_item_status(item_id, new_status, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            return Panel(f"[green]Status do item {item_id} atualizado para '{new_status}'.[/green]", border_style="green")
+        except (IndexError, ValueError):
+            return Panel("[bold red]Uso:[/bold red] actions update [res|ora] <id> <novo_status>", border_style="red")
+-e 
+--- Fim do arquivo ./app/handlers/actions_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/notes_handler.py
+# app/handlers/notes_handler.py
+from rich.table import Table
+from rich.panel import Panel
+from rich.markup import escape
+from app.models import notes_model
+
+def handle_notes_command(args: list[str]):
+    if not args or args[0] not in ['view', 'read']:
+        return Panel("[bold red]Uso:[/bold red] notes [view|read <id>]", border_style="red")
+
+    sub_cmd = args[0]
+
+    if sub_cmd == 'view':
+        notes = notes_model.get_all_notes()
+        table = Table(title="Notas de Estudo (Commonplace Book)")
+        table.add_column("ID", style="cyan")
+        table.add_column("Título", style="white")
+        table.add_column("Tags", style="yellow")
+        for note in notes:
+            table.add_row(str(note['id']), note['title'], note['tags'])
+        return table
+        
+    elif sub_cmd == 'read':
+        try:
+            note_id = int(args[1])
+            note = notes_model.get_note_by_id(note_id)
+            if note:
+                return Panel(escape(note['content']), title=f"[#fabd2f]{note['title']}[/] | Tags: [#8ec07c]{note['tags']}[/]", border_style="cyan")
+            else:
+                return Panel("[yellow]Nota não encontrada.[/yellow]", border_style="yellow")
+        except (IndexError, ValueError):
+            return Panel("[bold red]Uso:[/bold red] notes read <id>", border_style="red")
+-e 
+--- Fim do arquivo ./app/handlers/notes_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/bible_handler.py
+# app/handlers/bible_handler.py
+import re
+from rich.panel import Panel
+from rich.text import Text
+from rich.console import Group
+from app.models import bible
+from app.core.config import LIVROS_E_ABREVIACOES
+
+# Constrói um mapa de abreviações mais robusto
+BOOK_MAP = {}
+for nome, abrev in LIVROS_E_ABREVIACOES:
+    BOOK_MAP[nome.lower().replace(" ", "")] = nome
+    BOOK_MAP[abrev.lower().replace(" ", "")] = nome
+
+def _parse_reference(ref_string: str):
+    pattern = re.compile(r'^\s*([1-3]?\s*[a-zA-Záéíóúâêôãõç]+)\.?\s*(\d+)(?::(\d+)(?:-(\d+))?)?\s*$')
+    match = pattern.match(ref_string)
+    if not match: return None
+    groups = match.groups()
+    book, chapter, start_v, end_v = groups
+    return book.strip(), int(chapter), int(start_v) if start_v else 1, int(end_v) if end_v else (int(start_v) if start_v else None)
+
+def handle_bible_command(args: list[str]):
+    if not args:
+        return Panel("[bold red]Uso:[/bold red] bible <referência>", border_style="red")
+
+    ref_string = " ".join(args)
+    parsed_ref = _parse_reference(ref_string)
+    if not parsed_ref:
+        return Panel(f"[bold red]Referência inválida:[/bold red] '{ref_string}'", border_style="red")
+
+    book_input, chapter, start_verse, end_verse = parsed_ref
+    book_key = book_input.lower().replace(" ", "").replace(".", "")
+    book_full_name = BOOK_MAP.get(book_key)
+    
+    if not book_full_name:
+        return Panel(f"[bold red]Livro não reconhecido:[/bold red] '{book_input}'", border_style="red")
+
+    verses = bible.get_verses(book_full_name, chapter, start_verse, end_verse)
+    if not verses:
+        return Panel("[yellow]Referência não encontrada.[/yellow]", border_style="yellow")
+
+    title = f"📖 {book_full_name} {chapter}:{start_verse}"
+    if end_verse and end_verse != start_verse: title += f"-{end_verse}"
+    
+    content = [Text.assemble((f"[{v['verse']}] ", "yellow"), v['text']) for v in verses]
+    return Panel(Group(*content), title=title, border_style="#fabd2f")
+-e 
+--- Fim do arquivo ./app/handlers/bible_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/symbols_handler.py
+# app/handlers/symbols_handler.py
+from rich.panel import Panel
+from rich.markup import escape
+from rich.text import Text
+from app.models import symbols
+
+def handle_symbols_command(args: list[str]):
+    if not args:
+        return Panel("[bold red]Uso:[/bold red] symbols [cfw|cmw|bcw] [referência]", border_style="red")
+    
+    doc = args[0].lower()
+    ref = " ".join(args[1:])
+    
+    if doc == 'cfw':
+        try:
+            chap, sec = map(int, ref.split('.'))
+            article = symbols.get_cfw_article(chap, sec)
+            if article:
+                return Panel(escape(article['text']), title=f"CFW {chap}.{sec}: {article['title']}")
+            return Panel("[yellow]Artigo não encontrado.[/yellow]", border_style="yellow")
+        except ValueError:
+            return Panel("[bold red]Formato inválido.[/bold red] Use 'cfw capitulo.secao'", border_style="red")
+            
+    elif doc in ['cmw', 'bcw']:
+        try:
+            qid = int(ref)
+            q_func = symbols.get_cmw_question if doc == 'cmw' else symbols.get_bcw_question
+            q = q_func(qid)
+            if q:
+                content = Text.assemble(("P: ", "bold yellow"), f"{escape(q['question'])}\n\n", ("R: ", "bold green"), escape(q['answer']))
+                return Panel(content, title=f"{doc.upper()} Pergunta {qid}")
+            return Panel("[yellow]Pergunta não encontrada.[/yellow]", border_style="yellow")
+        except ValueError:
+            return Panel("[bold red]Referência inválida.[/bold red] Deve ser um número.", border_style="red")
+            
+    return Panel("[bold red]Documento inválido.[/bold red] Use 'cfw', 'cmw', ou 'bcw'.", border_style="red")
+-e 
+--- Fim do arquivo ./app/handlers/symbols_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/psaltery_handler.py
+# app/handlers/psaltery_handler.py
+import os
+import re
+import subprocess
+from rich.panel import Panel
+from rich.table import Table
+from rich.console import Group
+from rich.markup import escape
+from app.models import psaltery
+from app.core.config import DATA_DIR
+
+def handle_psaltery_command(args: list[str]):
+    if not args or args[0].lower() == 'list':
+        all_psalms = psaltery.get_all_psalms_references()
+        table = Table(title="Saltério - Lista de Salmos")
+        table.add_column("Referência", style="cyan")
+        table.add_column("Música (I/C/A)", style="yellow", justify="center")
+
+        def sort_key(p):
+            match = re.match(r'(\d+)([A-Z]*)', p['referencia'])
+            return (int(match.groups()[0]), match.groups()[1]) if match else (999, p['referencia'])
+
+        for psalm in sorted(all_psalms, key=sort_key):
+            music = ""
+            has_i = 'instrumental' in psalm.keys() and psalm['instrumental']
+            has_c = 'à_capela' in psalm.keys() and psalm['à_capela']
+            if has_i and has_c: music = "A"
+            elif has_i: music = "I"
+            elif has_c: music = "C"
+            table.add_row(psalm['referencia'], music)
+        return table
+
+    referencia = args[0].upper()
+    sub_cmd = args[1].lower() if len(args) > 1 else 'view'
+    psalm = psaltery.get_psalm_by_reference(referencia)
+
+    if not psalm:
+        return Panel(f"[red]Salmo '{referencia}' não encontrado.[/red]", border_style="red")
+
+    if sub_cmd == 'play':
+        version = args[2].lower() if len(args) > 2 else None
+        key = 'instrumental' if version in ['i', 'instrumental'] else 'à_capela'
+        
+        if key in psalm.keys() and psalm[key]:
+            path = os.path.join(DATA_DIR, psalm[key])
+            if os.path.exists(path):
+                try:
+                    subprocess.Popen(['mpv', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    return Panel(f"[green]Iniciando a reprodução de '{psalm[key]}'.[/green]\n[italic]Feche a janela do mpv para continuar.[/italic]", border_style="green")
+                except FileNotFoundError:
+                    return Panel("[red]Comando 'mpv' não encontrado.[/red] Instale-o para usar esta função.", border_style="red")
+            return Panel(f"[red]Arquivo de áudio não encontrado:[/red] {path}", border_style="red")
+        return Panel(f"[yellow]Versão de áudio não disponível para o Salmo {referencia}.[/yellow]", border_style="yellow")
+    
+    meta = Table(box=None, show_header=False)
+    meta.add_column(style="yellow"); meta.add_column()
+    meta.add_row("Tipo:", psalm['tipo']); meta.add_row("Métrica:", psalm['metrica'])
+    meta.add_row("Melodia:", psalm['melodia']); meta.add_row("Compositor:", psalm['compositor'])
+
+    letra = escape(psalm['letra'])
+    
+    return Panel(Group(meta, "\n", letra), title=f"Salmo {referencia}", border_style="#fabd2f")
+-e 
+--- Fim do arquivo ./app/handlers/psaltery_handler.py ---
+
+-e 
+Arquivo: ./app/handlers/reports_handler.py
+# app/handlers/reports_handler.py
+from collections import Counter
+from datetime import datetime, timedelta
+from rich.panel import Panel
+from rich.text import Text
+from app.models import journal_model, action_item_model
+
+def handle_reports_command(args: list[str]):
+    """Gera um relatório semanal e o retorna como um widget Rich."""
+    # 1. Diário
+    entries = journal_model.get_all_entries()
+    one_week_ago = datetime.now() - timedelta(days=7)
+    recent = [e for e in entries if datetime.strptime(e['entry_date'], '%Y-%m-%d %H:%M:%S') > one_week_ago]
+    
+    journal_txt = f"- Você escreveu [bold green]{len(recent)}[/bold green] entradas nos últimos 7 dias."
+    all_tags = [tag.strip() for e in recent for tag in e['tags'].split(',') if tag.strip()]
+    if all_tags:
+        tags_str = ", ".join([f"'{t}' ({c}x)" for t, c in Counter(all_tags).most_common(3)])
+        journal_txt += f"\n- Tags mais comuns: [yellow]{tags_str}[/yellow]."
+
+    # 2. Ações
+    res = action_item_model.get_items('Resolução')
+    active_res = len([r for r in res if r['status'] == 'Ativo'])
+    
+    pray = action_item_model.get_items('Pedido de Oração')
+    active_pray = len([p for p in pray if p['status'] == 'Ativo'])
+    
+    actions_txt = f"- Você tem [bold green]{active_res}[/bold green] resoluções e [bold green]{active_pray}[/bold green] orações ativas."
+
+    # Monta o texto final
+    content = Text.assemble(
+        ("Diário:\n", "bold info"), journal_txt,
+        ("\n\n", ""),
+        ("Ações:\n", "bold info"), actions_txt,
+        ("\n\n", ""),
+        ("[italic]Continue perseverando na piedade (1 Timóteo 4:8).[/italic]", "dim")
+    )
+    
+    return Panel(content, title="Relatório Devocional Semanal", border_style="green")
+-e 
+--- Fim do arquivo ./app/handlers/reports_handler.py ---
+
+-e 
+Arquivo: ./app/screens/home_screen.py
+from textual.app import App
+from textual.widgets import Header, Footer, ListView, ListItem
+from textual.containers import Container
+from textual.widgets import Label
+
+class HomeScreen(Container):
+    """A tela principal com o menu de seleção de módulos."""
+
+    def compose(self):
+        yield Label("[bold #fabd2f]Selecione um módulo:[/]", classes="menu-title")
+        yield ListView(
+            ListItem(Label("📖 Diário (Journal)"), id="journal"),
+            ListItem(Label("📝 Notas (Commonplace)"), id="notes"),
+            ListItem(Label("🙏 Ações (Resoluções/Orações)"), id="actions"),
+            ListItem(Label("✝️ Símbolos da Fé"), id="symbols"),
+            ListItem(Label("🎵 Saltério"), id="psaltery"),
+            ListItem(Label("📜 Bíblia (via comando)"), id="bible_info"),
+            ListItem(Label("📊 Relatórios"), id="reports"),
+            id="main_menu"
+        )
+
+    def on_mount(self):
+        """Foca na lista quando a tela é montada."""
+        self.query_one(ListView).focus()
+-e 
+--- Fim do arquivo ./app/screens/home_screen.py ---
+
+-e 
+Arquivo: ./app/screens/journal_screen.py
+from textual.screen import Screen
+from textual.widgets import Header, Footer, DataTable
+from textual.binding import Binding
+from app.models import journal_model
+from rich.text import Text
+
+# Importaremos esta tela de popup em breve
+from .add_journal_screen import AddJournalScreen
+
+class JournalScreen(Screen):
+    """Tela para visualizar e navegar pelas entradas do diário."""
+
+    BINDINGS = [
+        Binding("q", "app.pop_screen", "Voltar"),
+        Binding("j", "cursor_down", "Mover para baixo", show=False),
+        Binding("k", "cursor_up", "Mover para cima", show=False),
+        Binding("a", "add_entry", "Adicionar Entrada"),
+        Binding("enter", "select_entry", "Ver Detalhes"),
+    ]
+
+    def compose(self):
+        yield Header()
+        yield DataTable(id="journal_table")
+        yield Footer()
+
+    def on_mount(self):
+        """Carrega os dados na tabela quando a tela é montada."""
+        self.update_table()
+
+    def update_table(self):
+        """Busca as entradas do diário e preenche a tabela."""
+        table = self.query_one(DataTable)
+        table.clear(columns=True)
+        table.add_columns("Data", "Tags", "Conteúdo (início)")
+        
+        entries = journal_model.get_all_entries()
+        for entry in entries:
+            # Pega apenas a primeira linha do conteúdo para a prévia
+            preview = entry['content'].split('\n', 1)[0]
+            
+            # Adiciona a linha com metadados para podermos buscar o ID depois
+            table.add_row(
+                Text(entry['entry_date'], style="#fabd2f"),
+                Text(entry['tags'], style="#8ec07c"),
+                Text(preview, style="dim"),
+                key=str(entry['id'])
+            )
+
+    def action_add_entry(self):
+        """Abre a tela de adição de nova entrada."""
+        def check_if_saved(saved: bool):
+            if saved:
+                self.update_table()
+
+        self.app.push_screen(AddJournalScreen(), check_if_saved)
+
+    def action_select_entry(self):
+        """Exibe o conteúdo completo da entrada selecionada."""
+        table = self.query_one(DataTable)
+        entry_id = table.get_row_key(table.cursor_row)
+        # Por enquanto, vamos apenas mostrar um popup simples
+        # Idealmente, isso abriria uma nova tela de detalhes
+        entry = next((e for e in journal_model.get_all_entries() if str(e['id']) == entry_id), None)
+        if entry:
+            self.app.notify("Detalhes da Entrada", entry['content'], timeout=10)
+-e 
+--- Fim do arquivo ./app/screens/journal_screen.py ---
+
+-e 
+Arquivo: ./app/screens/add_journal_screen.py
+from textual.screen import ModalScreen
+from textual.widgets import Input, Button, Label
+from textual.containers import Vertical
+from textual.widgets import TextArea
+from textual.binding import Binding
+from datetime import datetime
+from app.models import journal_model
+
+class AddJournalScreen(ModalScreen[bool]):
+    """Uma tela modal para adicionar uma nova entrada no diário."""
+
+    BINDINGS = [Binding("ctrl+s", "save", "Salvar")]
+
+    def compose(self):
+        with Vertical(classes="modal_container"):
+            yield Label("Nova Entrada no Diário", id="modal_title")
+            yield Label("Conteúdo (Ctrl+S para Salvar, Esc para Cancelar):")
+            yield TextArea(language="markdown", id="journal_content", theme="gruvbox-dark")
+            yield Input(placeholder="Tags (separadas por vírgula)", id="journal_tags")
+            yield Button("Salvar", variant="primary", id="save_button")
+            yield Button("Cancelar", id="cancel_button")
+
+    def on_mount(self):
+        self.query_one(TextArea).focus()
+
+    def action_save(self):
+        """Salva a nova entrada."""
+        content = self.query_one("#journal_content").text
+        tags = self.query_one("#journal_tags").value
+        if content.strip():
+            journal_model.add_entry(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content, tags)
+            self.dismiss(True) # Retorna True, indicando que foi salvo
+        else:
+            self.app.notify("Erro: Conteúdo não pode ser vazio.", severity="error")
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "save_button":
+            self.action_save()
+        else:
+            self.dismiss(False) # Retorna False, indicando que foi cancelado
+-e 
+--- Fim do arquivo ./app/screens/add_journal_screen.py ---
+
+-e 
+Arquivo: ./app/textual_app.py
+# app/textual_app.py
+# VERSÃO FINAL, ROBUSTA E FUNCIONAL
+
+from textual.app import App, ComposeResult
+from textual.containers import Container, Horizontal
+from textual.widgets import Header, Footer, Static, Input
+from rich.panel import Panel
+from rich.align import Align
+from rich.console import Group
+from rich.text import Text
+
+from app.ui.icons import *
+# Importa todos os handlers para reconectar a funcionalidade
+from app.handlers import help_handler, bible_handler, psaltery_handler, symbols_handler
+
+# Mapeia os comandos que já temos para seus handlers
+COMMAND_MAP = {
+    "help": help_handler.handle_help_command,
+    "bible": bible_handler.handle_bible_command,
+    "psaltery": psaltery_handler.handle_psaltery_command,
+    "symbols": symbols_handler.handle_symbols_command,
+    # Adicionaremos os outros aqui conforme recriamos suas telas
+}
+
+class WelcomeWidget(Static):
+    """O widget da tela de boas-vindas. Agora sem o bug de expansão."""
+    def compose(self) -> ComposeResult:
+        title = Text("Cyber-Puritano", justify="center", style="#fabd2f")
+        quote = Text.assemble(
+            ("\nA tua palavra é lâmpada que ilumina os meus passos...", "italic"),
+            ("\nSalmo 119:105", "bold #a89984")
+        )
+        help_text = Text.assemble(("\n\nDigite '", "#ebdbb2"), ("help", "bold #8ec07c"), ("' para iniciar.", "#ebdbb2"))
+
+        # O painel agora está contido dentro de um Align, sem expandir
+        welcome_panel = Panel(
+            Align.center(Group(title, Align.center(quote), Align.center(help_text)), vertical="middle"),
+            title=f"[bold] {SCROLL} Bem-vindo [/]",
+            border_style="#665c54",
+            height=20 # Altura fixa para evitar que ele "cresça" demais
+        )
+        yield Static(welcome_panel)
+
+class PuritanApp(App):
+    """Sua Mesa de Estudos Digital."""
+    CSS_PATH = "ui/styles.tcss"
+    BINDINGS = [("escape", "quit", "Sair")]
+
+    def compose(self) -> ComposeResult:
+        """Cria o layout principal da aplicação."""
+        yield Header()
+        yield Container(
+            Static("Sidebar Estática", id="sidebar"),
+            Container(WelcomeWidget(), id="content_area")
+        , id="main_container")
+        yield Input(placeholder=f"{PROMPT} Digite um comando...", id="command_input")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Configura os elementos estáticos da UI."""
+        self.query_one(Header).text = f" {CROSS} Cyber-Puritano"
+        self.query_one(Footer).text = "Post Tenebras Lux"
+        self.query_one(Input).focus()
+
+    async def on_input_submitted(self, message: Input.Submitted) -> None:
+        """Lida com os comandos enviados pelo usuário."""
+        command_text = message.value.strip()
+        message.input.clear()
+
+        if not command_text:
+            return
+
+        # Lógica de parse do comando (reaproveitada)
+        from app.cli.command_parser import parse
+        parsed = parse(command_text)
+        if not parsed:
+            result_widget = Static(Panel(f"[red]Comando inválido: {command_text}[/red]", border_style="red"))
+        else:
+            cmd, args = parsed["cmd"], parsed["args"]
+            
+            # Limpa a tela ou sai
+            if cmd in ["exit", "q"]:
+                self.exit()
+            elif cmd in ["clear", "cls"]:
+                 # Limpa o conteúdo
+                content_area = self.query_one("#content_area")
+                content_area.query("*").remove()
+                return
+
+            # Executa o comando do mapa
+            if handler := COMMAND_MAP.get(cmd):
+                # O resultado de um handler (um Panel, Table, etc. do Rich)
+                rich_renderable = handler(args)
+                # "Embrulhamos" em um Static para o Textual poder exibir
+                result_widget = Static(rich_renderable)
+            else:
+                result_widget = Static(Panel(f"[yellow]Comando '{cmd}' não implementado.[/yellow]", border_style="yellow"))
+
+        # Atualiza a área de conteúdo
+        content_area = self.query_one("#content_area")
+        content_area.query("*").remove() # Limpa o conteúdo anterior
+        content_area.mount(result_widget) # Monta o novo resultado
+-e 
+--- Fim do arquivo ./app/textual_app.py ---
+
+-e 
+Arquivo: ./main.py
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -841,4 +2120,135 @@ from app.cli import cli
 
 if __name__ == '__main__':
     cli()
+-e 
+--- Fim do arquivo ./main.py ---
 
+
+Esquema dos arquivos SQLite:
+
+Banco de Dados: ./data/Biblia.sqlite
+CREATE TABLE IF NOT EXISTS "_book_old" (
+    id INTEGER PRIMARY KEY,
+    book_reference_id INTEGER,
+    testament_reference_id INTEGER,
+    name TEXT
+);
+CREATE TABLE IF NOT EXISTS "_testament_old" (
+    id INTEGER PRIMARY KEY,
+    name TEXT
+);
+CREATE TABLE verse (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book_id INTEGER NOT NULL,
+    chapter INTEGER NOT NULL,
+    verse INTEGER NOT NULL,
+    text TEXT,
+    version TEXT NOT NULL -- Coluna essencial para identificar a tradução
+);
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE INDEX idx_verse_lookup ON verse (version, book_id, chapter);
+CREATE TABLE book (
+        "id"    INTEGER,
+        "book_reference_id"     INTEGER,
+        "testament_reference_id"        INTEGER,
+        "name"  TEXT
+, PRIMARY KEY("id"));
+CREATE TABLE testament (
+        "id"    INTEGER,
+        "name"  TEXT
+, PRIMARY KEY("id"));
+
+Banco de Dados: ./data/dados.db
+CREATE TABLE texts (id INTEGER PRIMARY KEY AUTOINCREMENT, document TEXT NOT NULL, location TEXT NOT NULL);
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE proof_texts (id INTEGER PRIMARY KEY AUTOINCREMENT, text_id INTEGER NOT NULL, book_id INTEGER NOT NULL, chapter INTEGER NOT NULL, verse INTEGER NOT NULL, FOREIGN KEY (text_id) REFERENCES texts (id));
+CREATE TABLE cfw_articles (id INTEGER PRIMARY KEY AUTOINCREMENT, chapter INTEGER NOT NULL, section INTEGER NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL);
+CREATE TABLE cmw (id INTEGER PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL);
+CREATE TABLE bcw (id INTEGER PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL);
+CREATE TABLE notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    content TEXT,
+                    tags TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+CREATE TABLE journal (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_date TEXT NOT NULL,
+            content TEXT NOT NULL,
+            tags TEXT
+        );
+CREATE TABLE action_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_type TEXT NOT NULL,
+            text TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT,
+            last_updated_at TEXT
+        );
+CREATE TABLE verse_references (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    book TEXT NOT NULL,
+    chapter INTEGER NOT NULL,
+    verse INTEGER NOT NULL,
+    journal_id INTEGER, -- Liga a uma entrada no diário (ex: sermão)
+    note_id INTEGER,    -- Liga a uma nota de estudo
+    symbol_id TEXT,     -- Liga a um Símbolo (ex: 'cfw_7.3')
+    FOREIGN KEY (journal_id) REFERENCES journal (id),
+    FOREIGN KEY (note_id) REFERENCES notes (id)
+);
+CREATE TABLE salterio (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referencia TEXT NOT NULL UNIQUE,
+    tipo TEXT,
+    metrica TEXT,
+    melodia TEXT,
+    compositor TEXT,
+    harmonizacao TEXT,
+    letra TEXT,
+    instrumental TEXT,
+    "à_capela" TEXT
+);
+# Cyber-Puritano: Ferramenta Devocional Pessoal
+
+Esta é uma ferramenta de linha de comando (CLI) para auxiliar na disciplina e registro da vida devocional, inspirada nas práticas puritanas e reformadas, com foco na simplicidade e na reflexão textual.
+
+## Como Usar
+
+1.  **Instalar as dependências:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2.  **Executar a aplicação em modo interativo:**
+    ```bash
+    python main.py
+    ```
+
+3.  **Dentro da aplicação, use os seguintes comandos:**
+
+| Comando   | Alias | Exemplo de Uso                                 | Descrição                                         |
+|-----------|-------|------------------------------------------------|-----------------------------------------------------|
+| `journal` | `j`   | `j add`, `j view`, `j find sermão`             | Gerencia seu diário espiritual unificado.           |
+| `actions` | `a`   | `a add res ...`, `a view ora`                  | Gerencia resoluções e pedidos de oração.          |
+| `notes`   | `n`   | `n add`, `n view`, `n read 1`                  | Seu "Commonplace Book" para notas de estudo.        |
+| `psaltery`| `p`   | `p 15A`, `p 23 play`, `p list`                 | Consulta o Saltério, com música e metadados.      |
+| `bible`   | `b`   | `b jo 3:16-18`                                 | Lê passagens da Bíblia (versão NAA).              |
+| `symbols` | `s`   | `s cfw 1.1`, `s cmw 1`                         | Consulta os Símbolos de Fé de Westminster.        |
+| `reports` | `rep` | `rep`                                          | Mostra um resumo da sua atividade na última semana. |
+| `help`    | `h`   | `h`                                            | Mostra esta tabela de ajuda.                      |
+| `clear`   | `cls` | `cls`                                          | Limpa a tela do terminal.                         |
+| `exit`    | `q`   | `q`                                            | Encerra a aplicação.                              |
+
+## Estrutura do Banco de Dados (`dados.db`)
+
+A aplicação usa uma estrutura de banco de dados simplificada e poderosa:
+
+-   `journal`: Armazena todas as entradas cronológicas (diário, meditações, sermões) em formato de texto livre com tags.
+-   `action_items`: Armazena itens que requerem acompanhamento, como resoluções (`Resolução`) e pedidos de oração (`Pedido de Oração`).
+-   `notes`: Armazena notas de estudo temáticas e mais longas, funcionando como um "Commonplace Book".
+-   Tabelas de consulta: `salterio`, `cfw_articles`, `cmw`, `bcw`.
+
+---
+**Soli Deo Gloria**

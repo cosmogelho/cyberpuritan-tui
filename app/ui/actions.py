@@ -129,7 +129,6 @@ def _handle_bible(args):
         table = Table(title="Livros da Bíblia e Abreviações Comuns")
         table.add_column("Livro", style="white"); table.add_column("Abrev.", style="yellow")
         abbrev_map = {v: k for k, v in BIBLE_ABBREVIATIONS.items()}
-        # Ajustado para layout de duas colunas
         num_books = len(books)
         mid_point = (num_books + 1) // 2
         for i in range(mid_point):
@@ -178,9 +177,6 @@ def _handle_symbols(args):
         except ValueError: console.print("[erro]Referência para catecismos deve ser um número.")
     else: console.print("[erro]Documento inválido. Use 'cfw', 'cmw', ou 'bcw'.")
 
-# ============================================================================
-# (CORRIGIDO) HANDLER DO SALTÉRIO COM ACESSO CORRETO A DADOS E QUERY CORRIGIDA
-# ============================================================================
 def _handle_psaltery(args):
     if not args or args[0].lower() == 'list':
         all_psalms = psaltery.get_all_psalms_references()
@@ -188,6 +184,7 @@ def _handle_psaltery(args):
         table = Table(title="Saltério - Lista de Salmos")
         table.add_column("Referência", style="cyan", no_wrap=True)
         table.add_column("Música", style="yellow", justify="center")
+        table.add_column("Tema(s)", style="white", max_width=60, overflow="ellipsis")
         
         if not all_psalms:
             console.print("[warning]Nenhum salmo encontrado na base de dados.[/warning]")
@@ -195,36 +192,46 @@ def _handle_psaltery(args):
 
         def sort_key(p):
             match = re.match(r'(\d+)([A-Z]*)', p['referencia'])
-            if match:
-                num, letter = match.groups()
-                return int(num), letter
-            return 999, p['referencia'] 
+            return (int(match.group(1)), match.group(2)) if match else (999, p['referencia'])
 
         sorted_psalms = sorted(all_psalms, key=sort_key)
         
         last_psalm_num = -1
         for psalm in sorted_psalms:
             current_psalm_num = sort_key(psalm)[0]
-            if last_psalm_num != -1 and current_psalm_num != last_psalm_num:
-                table.add_row("──────────", "──", style="dim")
-            last_psalm_num = current_psalm_num
             
-            # (CORRIGIDO) Acesso aos dados usando colchetes e verificação de existência da chave
+            # Desenha o separador se o número do salmo mudar
+            if last_psalm_num != -1 and current_psalm_num != last_psalm_num:
+                table.add_row("──────────", "──", "────────────────", style="dim")
+            
+            # Lógica para o indicador de música
             music_indicator = ""
             has_instrumental = 'instrumental' in psalm.keys() and psalm['instrumental']
             has_capela = 'à_capela' in psalm.keys() and psalm['à_capela']
             
-            if has_instrumental and has_capela:
-                music_indicator = "A"
-            elif has_instrumental:
-                music_indicator = "I"
-            elif has_capela:
-                music_indicator = "C"
+            if has_instrumental and has_capela: music_indicator = "A"
+            elif has_instrumental: music_indicator = "I"
+            elif has_capela: music_indicator = "C"
 
-            table.add_row(psalm['referencia'], music_indicator)
+            # --- MUDANÇA PRINCIPAL AQUI ---
+            tema_completo = psalm['tema'] if ('tema' in psalm.keys() and psalm['tema']) else ""
+            tema_para_exibir = "" # Começa em branco por padrão
+
+            # Só exibe o tema se for o primeiro de um número
+            if current_psalm_num != last_psalm_num:
+                tema_para_exibir = tema_completo
+            # Se for uma variação (B, C...) e houver um tema, exibe um "ditto mark"
+            elif tema_completo:
+                tema_para_exibir = "〃"
+            
+            table.add_row(psalm['referencia'], music_indicator, tema_para_exibir)
+            # --- FIM DA MUDANÇA ---
+
+            # Atualiza o último número de salmo visto
+            last_psalm_num = current_psalm_num
             
         console.print(table)
-        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos[/info]")
+        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos | 〃: Mesmo tema do anterior[/info]")
         return
 
     referencia = args[0].upper()
@@ -238,8 +245,15 @@ def _handle_psaltery(args):
     def show_meta():
         table = Table(title=f"Metadados do Salmo {psalm['referencia']}", box=None, show_header=False)
         table.add_column(style="info"); table.add_column(style="white")
-        table.add_row("Referência:", psalm['referencia']); table.add_row("Tipo:", psalm['tipo']); table.add_row("Métrica:", psalm['metrica']); table.add_row("Melodia:", psalm['melodia'])
-        table.add_row("Compositor:", psalm['compositor']); table.add_row("Harmonização:", psalm['harmonizacao']); console.print(table)
+        table.add_row("Referência:", psalm['referencia'])
+        if 'tema' in psalm.keys() and psalm['tema']:
+            table.add_row("Tema(s):", f"[italic]{psalm['tema']}[/italic]")
+        table.add_row("Tipo:", psalm['tipo'])
+        table.add_row("Métrica:", psalm['metrica'])
+        table.add_row("Melodia:", psalm['melodia'])
+        table.add_row("Compositor:", psalm['compositor'])
+        table.add_row("Harmonização:", psalm['harmonizacao'])
+        console.print(table)
 
     def show_letra():
         console.print(f"\n[titulo]--- Salmo {psalm['referencia']} - Letra ---[/titulo]")
@@ -247,8 +261,10 @@ def _handle_psaltery(args):
 
     def play_music(psalm_data, requested_version=None):
         options = []
-        if psalm_data['instrumental']: options.append(("Instrumental", psalm_data['instrumental']))
-        if psalm_data['à_capela']: options.append(("À Capela", psalm_data['à_capela']))
+        if 'instrumental' in psalm_data.keys() and psalm_data['instrumental']:
+            options.append(("Instrumental", psalm_data['instrumental']))
+        if 'à_capela' in psalm_data.keys() and psalm_data['à_capela']:
+            options.append(("À Capela", psalm_data['à_capela']))
 
         if not options:
             console.print(f"[warning]O Salmo {referencia} não possui áudio cadastrado.[/warning]")
@@ -289,19 +305,14 @@ def _handle_psaltery(args):
             console.print(f"[erro]Arquivo de áudio não encontrado em: {full_path}[/erro]")
             return
             
-        process = None
         try:
-            console.print(f"[info]Iniciando mpv...[/info]")
-            process = subprocess.Popen(['mpv', full_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            console.input("[prompt]Tocando... Pressione Enter para parar.[/prompt]")
+            console.print(f"[info]Iniciando mpv... Pressione 'q' no player para retornar.[/info]")
+            subprocess.run(['mpv', full_path])
+            console.print("[info]Reprodução finalizada. Retornando ao Cyber-Puritano.[/info]")
         except FileNotFoundError:
             console.print("[erro]Comando 'mpv' não encontrado. Instale o mpv para usar esta função.[/erro]")
         except Exception as e:
             console.print(f"[erro]Ocorreu um erro inesperado ao tentar tocar: {e}[/erro]")
-        finally:
-            if process and process.poll() is None:
-                console.print("[info]Parando a reprodução.[/info]")
-                process.terminate()
 
     if sub_cmd == 'view': show_meta(); show_letra()
     elif sub_cmd == 'meta': show_meta()
@@ -311,7 +322,7 @@ def _handle_psaltery(args):
         play_music(psalm, requested_version=requested_version_arg)
     elif sub_cmd == 'all':
         show_meta(); show_letra()
-        if psalm['instrumental'] or psalm['à_capela']:
+        if ('instrumental' in psalm.keys() and psalm['instrumental']) or ('à_capela' in psalm.keys() and psalm['à_capela']):
             console.input("\n[prompt]Pressione Enter para ver as opções de áudio...[/prompt]")
             play_music(psalm)
     else:
