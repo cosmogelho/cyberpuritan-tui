@@ -181,30 +181,33 @@ def _handle_psaltery(args):
     if not args or args[0].lower() == 'list':
         all_psalms = psaltery.get_all_psalms_references()
         
-        table = Table(title="Saltério - Lista de Salmos")
-        table.add_column("Referência", style="cyan", no_wrap=True)
+        # --- MUDANÇA 1: Filtrar para mostrar apenas os salmos de Genebra (terminados em 'A') ---
+        geneva_psalms = [p for p in all_psalms if p['referencia'].endswith('A')]
+        
+        # --- MUDANÇA 2: Alterar o título da tabela ---
+        table = Table(title="Saltério de Genebra - Lista de Salmos")
+        table.add_column("Salmo", style="cyan", no_wrap=True) # Alterado de "Referência" para "Salmo"
         table.add_column("Música", style="yellow", justify="center")
         table.add_column("Tema(s)", style="white", max_width=60, overflow="ellipsis")
         
-        if not all_psalms:
-            console.print("[warning]Nenhum salmo encontrado na base de dados.[/warning]")
+        if not geneva_psalms:
+            console.print("[warning]Nenhum salmo de Genebra encontrado na base de dados.[/warning]")
             return
 
+        # A chave de ordenação não precisa mudar
         def sort_key(p):
             match = re.match(r'(\d+)([A-Z]*)', p['referencia'])
             return (int(match.group(1)), match.group(2)) if match else (999, p['referencia'])
 
-        sorted_psalms = sorted(all_psalms, key=sort_key)
+        sorted_psalms = sorted(geneva_psalms, key=sort_key)
         
         last_psalm_num = -1
         for psalm in sorted_psalms:
             current_psalm_num = sort_key(psalm)[0]
             
-            # Desenha o separador se o número do salmo mudar
             if last_psalm_num != -1 and current_psalm_num != last_psalm_num:
                 table.add_row("──────────", "──", "────────────────", style="dim")
             
-            # Lógica para o indicador de música
             music_indicator = ""
             has_instrumental = 'instrumental' in psalm.keys() and psalm['instrumental']
             has_capela = 'à_capela' in psalm.keys() and psalm['à_capela']
@@ -213,25 +216,18 @@ def _handle_psaltery(args):
             elif has_instrumental: music_indicator = "I"
             elif has_capela: music_indicator = "C"
 
-            # --- MUDANÇA PRINCIPAL AQUI ---
             tema_completo = psalm['tema'] if ('tema' in psalm.keys() and psalm['tema']) else ""
-            tema_para_exibir = "" # Começa em branco por padrão
-
-            # Só exibe o tema se for o primeiro de um número
-            if current_psalm_num != last_psalm_num:
-                tema_para_exibir = tema_completo
-            # Se for uma variação (B, C...) e houver um tema, exibe um "ditto mark"
-            elif tema_completo:
-                tema_para_exibir = "〃"
+            tema_para_exibir = tema_completo # Para os salmos 'A', sempre mostramos o tema
             
-            table.add_row(psalm['referencia'], music_indicator, tema_para_exibir)
-            # --- FIM DA MUDANÇA ---
-
-            # Atualiza o último número de salmo visto
+            # --- MUDANÇA 3: Remover a letra 'A' da referência ao exibir ---
+            referencia_para_exibir = psalm['referencia'].rstrip('A')
+            
+            table.add_row(referencia_para_exibir, music_indicator, tema_para_exibir)
+            
             last_psalm_num = current_psalm_num
             
         console.print(table)
-        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos | 〃: Mesmo tema do anterior[/info]")
+        console.print("\n[info]I: Instrumental | C: À Capela | A: Ambos[/info]")
         return
 
     referencia = args[0].upper()
