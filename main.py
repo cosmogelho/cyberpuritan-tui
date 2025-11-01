@@ -2,16 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 Ponto de entrada principal para a aplicação Cyber-Puritano.
-Este script inicia a interface de linha de comando.
+Este script inicia a interface de texto do usuário (TUI).
 """
 import sys
 import os
 
 # Adiciona o diretório raiz do projeto ao path para que os imports funcionem
-# e para que o `app` seja encontrado corretamente.
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from app.cli import cli
+# MODIFICADO: Importa a nova função principal diretamente do módulo cli
+from app.cli import run_interactive_mode
 
 if __name__ == '__main__':
-    cli()
+    # MODIFICADO: Chama a nova função principal que contém o loop da TUI
+    run_interactive_mode()
