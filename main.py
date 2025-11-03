@@ -1,17 +1,18 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Ponto de entrada principal para a aplicação Cyber-Puritano.
-Este script inicia a interface de linha de comando.
-"""
-import sys
-import os
+from app.cli import inicializar_estado, processar_input
+from app.ui.telas import desenhar_tela
+from app.core.db import inicializar_banco
 
-# Adiciona o diretório raiz do projeto ao path para que os imports funcionem
-# e para que o `app` seja encontrado corretamente.
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+def main():
+    """Ponto de entrada e loop principal da aplicação."""
+    inicializar_banco() # Garante que a tabela 'diario' exista
+    estado = inicializar_estado()
 
-from app.cli import cli
+    while estado.get("rodando", True):
+        desenhar_tela(estado)
+        comando = input("> ")
+        estado = processar_input(estado, comando)
 
-if __name__ == '__main__':
-    cli()
+    print("Saindo. A paz de Cristo seja contigo.")
+
+if __name__ == "__main__":
+    main()
