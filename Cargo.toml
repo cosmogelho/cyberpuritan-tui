@@ -1,0 +1,21 @@
+[package]
+name = "cyber_puritano"
+version = "0.1.0"
+edition = "2021"
+default-run = "cyber_puritano"
+
+[dependencies]
+crossterm = "0.27.0"
+ratatui = "0.26.1"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+tokio = { version = "1.36.0", features = ["full"] }
+
+[[bin]]
+name = "inspector"
+path = "src/bin/inspector.rs"
+
+[dependencies.chrono]
+version = "0.4.38"
+
+[dependencies.tempfile]
+version = "3.10.1"
