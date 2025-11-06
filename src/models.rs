@@ -61,3 +61,10 @@ pub struct Versiculo {
     pub verse: i32,
     pub text: String,
 }
+
+/// Representa um livro da Bíblia.
+#[derive(Clone, Debug)]
+pub struct Livro {
+    pub id: i32,
+    pub name: String,
+}

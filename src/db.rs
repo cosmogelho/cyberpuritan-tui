@@ -182,3 +182,24 @@ pub fn deletar_resolucao(id: i32) -> Result<()> {
     conn.execute("DELETE FROM resolucoes WHERE id = ?1", [id])?;
     Ok(())
 }
+
+pub fn listar_livros() -> Result<Vec<crate::models::Livro>> {
+    let conn = Connection::open(CANON_DB_PATH)?;
+    let mut stmt = conn.prepare("SELECT id, name FROM book ORDER BY id")?;
+    let iter = stmt.query_map([], |row| {
+        Ok(crate::models::Livro {
+            id: row.get(0)?,
+            name: row.get(1)?,
+        })
+    })?;
+    Ok(iter.collect::<Result<Vec<_>>>()?)
+}
+
+pub fn contar_capitulos(book_id: i32) -> Result<i32> {
+    let conn = Connection::open(CANON_DB_PATH)?;
+    conn.query_row(
+        "SELECT MAX(chapter) FROM verse WHERE book_id = ?1",
+        [book_id],
+        |row| row.get(0),
+    )
+}

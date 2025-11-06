@@ -1,111 +1,180 @@
-use super::{Action, Component, Module};
-use crate::{app::{App, MessageType}, db, models::Versiculo, theme::Theme};
+use super::{list_state::StatefulList, Action, Component, Module};
+use crate::{
+    app::App,
+    db,
+    models::{Livro, Versiculo},
+    theme::Theme,
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    layout::Rect,
-    widgets::{Paragraph, Wrap},
+    layout::{Constraint, Direction, Layout, Rect},
+    widgets::{HighlightSpacing, Paragraph, Row, Table, Wrap},
     Frame,
 };
 
-enum InputMode { Normal, Editing }
+enum ActivePane {
+    Books,
+    Chapters,
+}
 
 pub struct BibliaComponent {
+    books: StatefulList<Livro>,
+    chapters: StatefulList<i32>,
     verses: Vec<Versiculo>,
-    reference: String,
+    active_pane: ActivePane,
     scroll: u16,
-    input: String,
-    input_mode: InputMode,
-    status_message: (String, MessageType),
 }
 
 impl BibliaComponent {
     pub fn new() -> Self {
-        Self {
-            verses: Vec::new(),
-            reference: "Nenhuma passagem".to_string(),
+        let books = db::listar_livros().unwrap_or_default();
+        let mut component = Self {
+            books: StatefulList::with_items(books),
+            chapters: StatefulList::with_items(vec![]),
+            verses: vec![],
+            active_pane: ActivePane::Books,
             scroll: 0,
-            input: String::new(),
-            input_mode: InputMode::Normal,
-            status_message: ("Use [e] para buscar. Ex: ler genesis 1".to_string(), MessageType::Info),
-        }
+        };
+        component.on_book_change(); // Carrega capítulos e versos iniciais
+        component
     }
-    fn submit_command(&mut self) {
-        let command_text = self.input.trim();
-        if command_text.is_empty() { return; }
-        let parts: Vec<_> = command_text.split_whitespace().collect();
-        if parts.get(0) == Some(&"ler") && parts.len() == 3 {
-            let book = parts[1];
-            if let Ok(chapter) = parts[2].parse::<i32>() {
-                match db::ler_capitulo_biblia(book, chapter) {
-                    Ok(v) if !v.is_empty() => {
-                        self.verses = v;
-                        self.reference = format!("{} {}", book, chapter).to_uppercase();
-                        self.status_message = (format!("Carregado: {}.", self.reference), MessageType::Success);
-                        self.scroll = 0;
-                    }
-                    Ok(_) => self.status_message = (format!("Nenhum resultado para '{} {}'.", book, chapter), MessageType::Info),
-                    Err(_) => self.status_message = (format!("Erro: Livro '{}' não encontrado.", book), MessageType::Error),
-                }
-            } else { self.status_message = ("Erro: Capítulo inválido.".to_string(), MessageType::Error); }
-        } else { self.status_message = ("Comando inválido. Use: ler <livro> <capítulo>".to_string(), MessageType::Error); }
+
+    fn on_book_change(&mut self) {
+        if let Some(book) = self.books.selected_item() {
+            let chapter_count = db::contar_capitulos(book.id).unwrap_or(0);
+            let chapters_vec: Vec<i32> = (1..=chapter_count).collect();
+            self.chapters.set_items(chapters_vec);
+        } else {
+            self.chapters.set_items(vec![]);
+        }
+        self.on_chapter_change();
+    }
+
+    fn on_chapter_change(&mut self) {
+        if let (Some(book), Some(chapter)) =
+            (self.books.selected_item(), self.chapters.selected_item())
+        {
+            let verses_vec = db::ler_capitulo_biblia(&book.name, *chapter).unwrap_or_default();
+            self.verses = verses_vec;
+        } else {
+            self.verses = vec![];
+        }
+        self.scroll = 0;
     }
 }
 
 impl Component for BibliaComponent {
-    fn get_module(&self) -> Module { Module::Estudo }
+    fn get_module(&self) -> Module {
+        Module::Estudo
+    }
     fn handle_key_events(&mut self, key: KeyEvent, _app: &mut App) -> Option<Action> {
-        match self.input_mode {
-            InputMode::Normal => match key.code {
-                KeyCode::Char('v') | KeyCode::Esc => return Some(Action::Pop),
-                KeyCode::Char('j') | KeyCode::Down => self.scroll = self.scroll.saturating_add(1),
-                KeyCode::Char('k') | KeyCode::Up => self.scroll = self.scroll.saturating_sub(1),
-                KeyCode::Char('e') => self.input_mode = InputMode::Editing,
+        match key.code {
+            KeyCode::Char('v') | KeyCode::Esc => return Some(Action::Pop),
+            KeyCode::Char('l') | KeyCode::Tab => self.active_pane = ActivePane::Chapters,
+            KeyCode::Char('h') => self.active_pane = ActivePane::Books,
+            _ => {}
+        }
+
+        match self.active_pane {
+            ActivePane::Books => match key.code {
+                KeyCode::Char('j') | KeyCode::Down => {
+                    self.books.next();
+                    self.on_book_change();
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    self.books.previous();
+                    self.on_book_change();
+                }
                 _ => {}
             },
-            InputMode::Editing => match key.code {
-                KeyCode::Enter => { self.submit_command(); self.input.clear(); self.input_mode = InputMode::Normal; },
-                KeyCode::Char(c) => self.input.push(c),
-                KeyCode::Backspace => { self.input.pop(); },
-                KeyCode::Esc => { self.input.clear(); self.input_mode = InputMode::Normal; },
+            ActivePane::Chapters => match key.code {
+                KeyCode::Char('j') | KeyCode::Down => {
+                    self.chapters.next();
+                    self.on_chapter_change();
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    self.chapters.previous();
+                    self.on_chapter_change();
+                }
+                KeyCode::PageDown => self.scroll = self.scroll.saturating_add(5),
+                KeyCode::PageUp => self.scroll = self.scroll.saturating_sub(5),
                 _ => {}
-            }
+            },
         }
         None
     }
     fn render(&mut self, frame: &mut Frame, theme: &Theme) {
         let chunks = crate::ui::get_layout_chunks(frame.size());
-        self.render_view(frame, theme, chunks[1]);
-        self.render_footer(frame, theme, chunks[2]);
+        let content_area = chunks[1];
+
+        let layout = Layout::new(
+            Direction::Horizontal,
+            [
+                Constraint::Percentage(25),
+                Constraint::Percentage(15),
+                Constraint::Percentage(60),
+            ],
+        )
+        .split(content_area);
+
+        self.render_books(frame, theme, layout[0]);
+        self.render_chapters(frame, theme, layout[1]);
+        self.render_verses(frame, theme, layout[2]);
+
+        let footer = Paragraph::new("[h/l] Panes | [j/k] Navegar | [PgUp/PgDn] Scroll Texto | [v] Voltar")
+            .block(crate::ui::styled_block("Ajuda", theme));
+        frame.render_widget(footer, chunks[2]);
     }
 }
 
 impl BibliaComponent {
-    fn render_view(&self, frame: &mut Frame, theme: &Theme, area: Rect) {
-        let text = if self.verses.is_empty() { "\n\n\nUse [e] para buscar uma passagem.".to_string() }
-        else { self.verses.iter().map(|v| format!("[{}] {}\n", v.verse, v.text)).collect() };
-        let title = format!("Bíblia: {}", self.reference);
+    fn render_books(&mut self, frame: &mut Frame, theme: &Theme, area: Rect) {
+        let is_active = matches!(self.active_pane, ActivePane::Books);
+        let block = crate::ui::styled_block("Livros", theme)
+            .border_style(if is_active { theme.header_style } else { theme.base_style });
+        let rows = self.books.items.iter().map(|b| Row::new([b.name.clone()]));
+        let table = Table::new(rows, &[Constraint::Min(10)])
+            .block(block)
+            .highlight_style(theme.selected_style)
+            .highlight_spacing(HighlightSpacing::Always);
+        frame.render_stateful_widget(table, area, &mut self.books.state);
+    }
+
+    fn render_chapters(&mut self, frame: &mut Frame, theme: &Theme, area: Rect) {
+        let is_active = matches!(self.active_pane, ActivePane::Chapters);
+        let block = crate::ui::styled_block("Caps", theme)
+            .border_style(if is_active { theme.header_style } else { theme.base_style });
+        let rows = self
+            .chapters.items.iter()
+            .map(|c| Row::new([c.to_string()]));
+        let table = Table::new(rows, &[Constraint::Min(5)])
+            .block(block)
+            .highlight_style(theme.selected_style)
+            .highlight_spacing(HighlightSpacing::Always);
+        frame.render_stateful_widget(table, area, &mut self.chapters.state);
+    }
+
+    fn render_verses(&self, frame: &mut Frame, theme: &Theme, area: Rect) {
+        let title = match (self.books.selected_item(), self.chapters.selected_item()) {
+            (Some(b), Some(c)) => format!("{} {}", b.name, c),
+            _ => "Texto".to_string(),
+        };
+
+        let text = if self.verses.is_empty() {
+            "Selecione um capítulo.".to_string()
+        } else {
+            self.verses
+                .iter()
+                .map(|v| format!("[{}] {}", v.verse, v.text))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
         let p = Paragraph::new(text)
             .wrap(Wrap { trim: false })
             .scroll((self.scroll, 0))
             .block(crate::ui::styled_block(&title, theme))
             .style(theme.base_style);
-        frame.render_widget(p, area);
-    }
-    fn render_footer(&self, frame: &mut Frame, theme: &Theme, area: Rect) {
-        let (block_title, text, style) = match self.input_mode {
-            InputMode::Editing => {
-                frame.set_cursor(area.x + self.input.len() as u16 + 1, area.y + 1);
-                ("Comando", self.input.as_str(), theme.base_style)
-            },
-            InputMode::Normal => {
-                let (status_text, msg_type) = &self.status_message;
-                let color = match msg_type {
-                    MessageType::Success => theme.green, MessageType::Error => theme.red, MessageType::Info => theme.fg,
-                };
-                ("Status", status_text.as_str(), theme.base_style.fg(color))
-            }
-        };
-        let p = Paragraph::new(text).style(style).block(crate::ui::styled_block(block_title, theme));
         frame.render_widget(p, area);
     }
 }
