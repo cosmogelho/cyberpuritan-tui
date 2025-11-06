@@ -1,37 +1,72 @@
-# cyberpuritan-tui
+# 🕊️ cyberpuritan-tui
 
-Um aplicativo TUI (Terminal User Interface) para auxílio na piedade e estudo teológico pessoal, com foco na tradição puritana reformada.
+Um aplicativo **TUI (Terminal User Interface)** para auxílio na **piedade e estudo teológico pessoal**, com foco na **tradição puritana reformada** e na **prática devocional diária**.
 
-## Módulos Principais
+---
 
-O sistema é dividido em três seções, acessíveis pelas teclas `1`, `2` e `3`.
+## 📖 Sobre o Projeto
 
-### 1. Canto (Saltério)
+O **Cyberpuritan TUI** foi concebido como uma ferramenta para o cristão reformado cultivar a piedade, organizar seus estudos e refletir espiritualmente — tudo dentro do terminal, com simplicidade e foco.
 
-- **Listagem e Visualização:** Navegue pelos 150 Salmos.
-- **Leitura:** Visualize a letra completa do salmo selecionado.
-- **Áudio:** Reproduza o áudio instrumental (`t`) ou a capela (`c`) do salmo.
+O sistema é dividido em três módulos principais, acessíveis pelas teclas `1`, `2` e `3`.
 
-### 2. Piedade (Devocional)
+---
 
-- **Diário:** Crie e visualize entradas de um diário pessoal. A criação de uma nova entrada utiliza o editor de texto padrão do sistema (definido na variável de ambiente `$EDITOR`).
-- **Ações de Santificação:** Mantenha uma lista de tarefas para o crescimento espiritual. Ações podem ser marcadas como `pendente` ou `completa`.
-- **Resoluções:** Liste e gerencie resoluções pessoais.
+## 🔹 1. Canto — *Saltério de Genebra*
 
-### 3. Estudo (Teológico)
+- **Listagem e Visualização:** Navegue pelos **150 Salmos** metrificados.
+- **Leitura:** Visualize a letra completa de cada salmo.
+- **Áudio:**
+  - `t` — reproduz o áudio **instrumental** (todos os salmos possuem);
+  - `c` — reproduz o áudio **a capela (cantado)** (disponível apenas para alguns).
+- **Fonte:** Os salmos são do **Saltério de Genebra**, conforme edição e compilação da  
+  **Comissão Brasileira de Salmodia** — irmãos  
+  **Arthur Elohim Pires, Lucas Grassi Freire e Vítor Augusto Olivier**.  
+  📜 Site oficial: [https://salteriodegenebra.com.br/](https://salteriodegenebra.com.br/)
 
-- **Símbolos de Fé:** Leia os textos completos da Confissão de Fé de Westminster, do Catecismo Maior de Westminster e do Breve Catecismo de Westminster.
-- **Bíblia:** Uma ferramenta para leitura bíblica. Carregue e leia capítulos completos da tradução Almeida Revista e Atualizada (ARA).
+> 💡 Os metadados incluem indicação de autoria, metrificação e informações complementares de cada salmo.
 
-## Dependências
+---
 
-- **Externa:** O `mpv` é necessário para a reprodução de áudio. Ele deve estar instalado e acessível no `PATH` do sistema.
-- **Rust:** As dependências do projeto estão listadas no arquivo `Cargo.toml`.
+## 🔹 2. Piedade — *Vida Devocional*
 
-## Estrutura de Dados
+- **Diário:** Crie e visualize entradas pessoais no diário devocional.  
+  (As edições usam o editor de texto padrão definido em `$EDITOR`.)
+- **Ações de Santificação:** Registre e acompanhe ações práticas de piedade, marcando como `pendente` ou `completa`.
+- **Resoluções:** Anote e gerencie suas resoluções espirituais pessoais.
 
-- **Banco de Dados:** Todas as informações textuais (salmos, diário, símbolos, Bíblia, etc.) são armazenadas em um único banco de dados SQLite em `data/dados.db`.
-- **Áudios:** Os arquivos de áudio dos salmos, no formato `.opus`, devem estar no diretório `data/saltério/`.
+---
+
+## 🔹 3. Estudo — *Teologia e Escritura*
+
+- **Símbolos de Fé:** Leitura integral da  
+  - *Confissão de Fé de Westminster*  
+  - *Catecismo Maior de Westminster*  
+  - *Breve Catecismo de Westminster*
+- **Bíblia:** Ferramenta de leitura bíblica com capítulos completos da tradução **Almeida Revista e Atualizada (ARA)**.
+
+---
+
+## 🧰 Dependências
+
+- **Rust:** As dependências estão listadas em `Cargo.toml`.  
+- **Externa:**  
+  - [`mpv`](https://mpv.io/) — necessário para reprodução de áudio.  
+    Certifique-se de que está instalado e acessível no `PATH`.
+
+---
+
+## 🗂️ Estrutura de Dados
+
+- **Banco fixo (`canon.db`):** Contém textos teológicos, catecismos, confissões e Escritura.
+- **Banco pessoal (`piety.db`):** Armazena suas anotações, diários, ações e resoluções.  
+  É criado automaticamente na primeira execução, caso não exista.
+- **Áudios:**  
+  - Local: `data/saltério/`  
+  - Formato: `.opus`  
+  - Contém todos os instrumentais (mas nem todos "à capela").
+
+---
 
 ## Como Executar
 
@@ -40,14 +75,7 @@ Para iniciar a aplicação principal:
 ```bash
 cargo run
 ```
-
-## Utilitários
-
-O projeto inclui um binário auxiliar para inspecionar os livros e versões da Bíblia disponíveis no banco de dados:
-
-```bash
-cargo run --bin inspector
-```
+O aplicativo criará automaticamente o banco pessoal (data/piety.db) caso ainda não exista.
 
 ## Navegação e Atalhos
 
@@ -71,10 +99,12 @@ cargo run --bin inspector
 
 ---
 
-> O `cyberpuritan-tui` foi desenvolvido sob direção e revisão de **cosmogelho**, com apoio do Google AI Studio (modelo Gemini 2.5 Pro) para geração inicial de código e documentação.
+> O código e a arquitetura do projeto foram desenvolvidos com apoio intenso de modelos de IA (incluindo o Google Gemini 2.5 Pro e o ChatGPT GPT-5), a partir de diretrizes conceituais, teológicas e estruturais inteiramente humanas.
 >
-> As decisões conceituais, teológicas e estruturais foram totalmente humanas.
+> A autoria intelectual e teológica permanece 100% humana, enquanto a implementação foi amplamente auxiliada por IA.
 
 ## Licença
 
 Este projeto é distribuído sob a licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
+
+✝️ Soli Deo Gloria
