@@ -1,10 +1,10 @@
 /// Representa um único registro da tabela 'salterio'.
 #[derive(Clone, Debug)]
 pub struct Salmo {
-    pub id: i32,
+    pub _id: i32,
     pub referencia: String,
     pub melodia: Option<String>,
-    pub tema: Option<String>,
+    pub _tema: Option<String>,
     pub letra: Option<String>, // Campo para a letra completa
     pub instrumental: Option<String>,
     pub a_capela: Option<String>,
@@ -28,7 +28,7 @@ pub struct Resolucao {
 /// Representa uma entrada do diário.
 #[derive(Clone, Debug)]
 pub struct EntradaDiario {
-    pub id: i32,
+    pub _id: i32,
     pub data: String,
     pub texto: String,
 }

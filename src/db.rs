@@ -7,14 +7,13 @@ const DB_PATH: &str = "./data/dados.db";
 
 pub fn listar_salmos() -> Result<Vec<Salmo>> {
     let conn = Connection::open(DB_PATH)?;
-    // CORREÇÃO: Adiciona a coluna `letra` à consulta SQL.
     let mut stmt = conn.prepare("SELECT id, referencia, melodia, tema, letra, instrumental, \"à_capela\" FROM salterio ORDER BY CAST(referencia AS INTEGER)")?;
     let salmos_iter = stmt.query_map([], |row| {
         Ok(Salmo {
-            id: row.get(0)?,
+            _id: row.get(0)?,
             referencia: row.get(1)?,
             melodia: row.get(2)?,
-            tema: row.get(3)?,
+            _tema: row.get(3)?,
             letra: row.get(4)?,
             instrumental: row.get(5)?,
             a_capela: row.get(6)?,
@@ -22,7 +21,6 @@ pub fn listar_salmos() -> Result<Vec<Salmo>> {
     })?;
     Ok(salmos_iter.collect::<Result<Vec<Salmo>>>()?)
 }
-// ... resto do arquivo db.rs sem alterações ...
 pub fn listar_capitulos_cfw() -> Result<Vec<CfwCapitulo>> {
     let conn = Connection::open(DB_PATH)?;
     let mut stmt = conn.prepare("SELECT DISTINCT chapter, title FROM cfw ORDER BY chapter")?;
@@ -91,7 +89,7 @@ pub fn listar_entradas_diario() -> Result<Vec<EntradaDiario>> {
     let mut stmt = conn.prepare("SELECT id, data, texto FROM diario ORDER BY data DESC")?;
     let iter = stmt.query_map([], |row| {
         Ok(EntradaDiario {
-            id: row.get(0)?,
+            _id: row.get(0)?,
             data: row.get(1)?,
             texto: row.get(2)?,
         })

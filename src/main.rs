@@ -17,22 +17,28 @@ use std::process::Command;
 use std::time::Duration;
 use tempfile::NamedTempFile;
 
-fn main() -> io::Result<()> {
-    let salmos = db::listar_salmos().expect("Falha ao carregar salmos.");
-    let cfw = db::listar_capitulos_cfw().expect("Falha ao carregar CFW.");
-    let cmw = db::listar_perguntas_cmw().expect("Falha ao carregar CMW.");
-    let bcw = db::listar_perguntas_bcw().expect("Falha ao carregar BCW.");
-    let diario = db::listar_entradas_diario().expect("Falha ao carregar Diário.");
-    let acoes = db::listar_acoes().expect("Falha ao carregar Ações.");
-    let resolucoes = db::listar_resolucoes().expect("Falha ao carregar Resoluções.");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let salmos = db::listar_salmos()?;
+    let cfw = db::listar_capitulos_cfw()?;
+    let cmw = db::listar_perguntas_cmw()?;
+    let bcw = db::listar_perguntas_bcw()?;
+    let diario = db::listar_entradas_diario()?;
+    let acoes = db::listar_acoes()?;
+    let resolucoes = db::listar_resolucoes()?;
 
     let mut terminal = setup_terminal()?;
     let mut app = App::new(salmos, cfw, cmw, bcw, diario, acoes, resolucoes);
 
-    run(&mut terminal, &mut app)?;
+    // Executa a aplicação e guarda o resultado.
+    let run_result = run(&mut terminal, &mut app);
 
+    // Garante que o áudio pare e o terminal seja restaurado, mesmo se `run` retornar erro.
     app.stop_audio();
     restore_terminal()?;
+
+    // Propaga o erro de `run`, se houver.
+    run_result?;
+
     Ok(())
 }
 

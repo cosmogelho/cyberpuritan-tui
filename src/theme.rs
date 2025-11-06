@@ -1,15 +1,11 @@
 use ratatui::style::{Color, Style, Stylize};
 
 pub struct Theme {
-    pub bg: Color,
     pub fg: Color,
-    pub highlight_bg: Color,
     pub yellow: Color,
     pub green: Color,
-    pub blue: Color,
     pub red: Color,
     pub dim_fg: Color,
-
     pub base_style: Style,
     pub header_style: Style,
     pub selected_style: Style,
@@ -27,12 +23,9 @@ impl Theme {
         let dim_fg = Color::Rgb(146, 131, 116);
 
         Self {
-            bg,
             fg,
-            highlight_bg,
             yellow,
             green,
-            blue,
             red,
             dim_fg,
             base_style: Style::default().bg(bg).fg(fg),
