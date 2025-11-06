@@ -9,6 +9,7 @@ pub mod cmw_list;
 pub mod diario_list;
 pub mod diario_view;
 pub mod estudo_menu;
+pub mod list_state;
 pub mod piedade_menu;
 pub mod resolucoes_list;
 pub mod salmo_view;
