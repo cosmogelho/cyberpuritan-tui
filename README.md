@@ -14,7 +14,7 @@ O sistema é dividido em três módulos principais, acessíveis pelas teclas `1`
 
 ## 🔹 1. Canto — *Saltério de Genebra*
 
-- **Listagem e Visualização:** Navegue pelos **150 Salmos** metrificados.
+- **Listagem e Visualização:** Navegue pelos **150 Salmos** metrificados (em português brasileiro).
 - **Leitura:** Visualize a letra completa de cada salmo.
 - **Áudio:**
   - `t` — reproduz o áudio **instrumental** (todos os salmos possuem);
@@ -23,7 +23,7 @@ O sistema é dividido em três módulos principais, acessíveis pelas teclas `1`
   **Comissão Brasileira de Salmodia** e dos irmãos **Arthur Elohim Pires, Lucas Grassi Freire e Vítor Augusto Olivier**.  
   📜 Site oficial: [https://salteriodegenebra.com.br/](https://salteriodegenebra.com.br/)
 
-> 💡 Os metadados incluem indicação de autoria, metrificação e informações complementares de cada salmo.
+> 💡 Os metadados incluem indicação de autoria, metrificação e informações complementares de cada salmo. A CBS tem salmos com melodias mais modernas (titulados com "B" e chamados "melódicos", os quais possuem mais versões cantadas), todavia optei pelo de Genebra em virtude da importância histórica, da coesão e da facilidade (pois as melodias se repetem, apesar de haver maior dificuldade para não-músicos - como eu - em cantar sem a versão "à capela").
 
 ---
 
