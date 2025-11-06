@@ -98,7 +98,7 @@ O aplicativo criará automaticamente o banco pessoal (data/piety.db) caso ainda 
 
 ---
 
-> O código e a arquitetura do projeto foram desenvolvidos com apoio intenso de modelos de IA (incluindo o Google Gemini 2.5 Pro e o ChatGPT GPT-5), a partir de diretrizes conceituais, teológicas e estruturais inteiramente humanas.
+> O código e a arquitetura do projeto foram desenvolvidos com apoio intenso de modelos de IA (incluindo o Google Gemini 2.5 Pro, ChatGPT GPT-5 e Lumo Proton), a partir de diretrizes conceituais, teológicas e estruturais inteiramente humanas.
 >
 > A autoria intelectual e teológica permanece 100% humana, enquanto a implementação foi amplamente auxiliada por IA.
 
