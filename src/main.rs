@@ -18,6 +18,7 @@ use std::time::Duration;
 use tempfile::NamedTempFile;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    criar_banco_se_nao_existir();
     let salmos = db::listar_salmos()?;
     let cfw = db::listar_capitulos_cfw()?;
     let cmw = db::listar_perguntas_cmw()?;
@@ -97,4 +98,69 @@ fn restore_terminal() -> io::Result<()> {
     disable_raw_mode()?;
     stdout().execute(LeaveAlternateScreen)?;
     Ok(())
+}
+
+use rusqlite::Connection;
+use std::path::Path;
+
+/// Cria o banco `data/piety.db` e as tabelas se ainda não existirem
+fn criar_banco_se_nao_existir() {
+    let caminho = "data/piety.db";
+
+    // Garante que a pasta `data/` existe
+    std::fs::create_dir_all("data").unwrap();
+
+    // Se o banco já existe, não faz nada
+    if Path::new(caminho).exists() {
+        return;
+    }
+
+    // Cria o arquivo do banco
+    let conexao = Connection::open(caminho).unwrap();
+
+    // Cria as tabelas básicas
+    conexao
+        .execute_batch(
+            "
+            CREATE TABLE diario(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              data TEXT,
+              texto TEXT
+            );
+
+            CREATE TABLE acoes(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              descricao TEXT,
+              status TEXT,
+              data_criacao TEXT
+            );
+
+            CREATE TABLE resolucoes(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              texto TEXT,
+              data_criacao TEXT
+            );
+
+            CREATE TABLE sermoes(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              titulo TEXT,
+              tema TEXT,
+              pregador TEXT,
+              local TEXT,
+              data TEXT,
+              link TEXT,
+              passagem_principal TEXT
+            );
+
+            CREATE TABLE notas_estudo(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              referencia_biblica TEXT,
+              texto TEXT,
+              data_criacao TEXT
+            );
+            ",
+        )
+        .unwrap();
+
+    println!("✅ Banco de dados criado com sucesso em {caminho}");
 }
