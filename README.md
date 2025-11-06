@@ -20,8 +20,7 @@ O sistema é dividido em três módulos principais, acessíveis pelas teclas `1`
   - `t` — reproduz o áudio **instrumental** (todos os salmos possuem);
   - `c` — reproduz o áudio **a capela (cantado)** (disponível apenas para alguns).
 - **Fonte:** Os salmos são do **Saltério de Genebra**, conforme edição e compilação da  
-  **Comissão Brasileira de Salmodia** — irmãos  
-  **Arthur Elohim Pires, Lucas Grassi Freire e Vítor Augusto Olivier**.  
+  **Comissão Brasileira de Salmodia** e dos irmãos **Arthur Elohim Pires, Lucas Grassi Freire e Vítor Augusto Olivier**.  
   📜 Site oficial: [https://salteriodegenebra.com.br/](https://salteriodegenebra.com.br/)
 
 > 💡 Os metadados incluem indicação de autoria, metrificação e informações complementares de cada salmo.
