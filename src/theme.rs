@@ -9,7 +9,7 @@ pub struct Theme {
     pub blue: Color,
     pub red: Color,
     pub dim_fg: Color,
-    
+
     pub base_style: Style,
     pub header_style: Style,
     pub selected_style: Style,
@@ -27,7 +27,14 @@ impl Theme {
         let dim_fg = Color::Rgb(146, 131, 116);
 
         Self {
-            bg, fg, highlight_bg, yellow, green, blue, red, dim_fg,
+            bg,
+            fg,
+            highlight_bg,
+            yellow,
+            green,
+            blue,
+            red,
+            dim_fg,
             base_style: Style::default().bg(bg).fg(fg),
             header_style: Style::default().fg(blue).bold(),
             selected_style: Style::default().bg(highlight_bg).fg(fg),
