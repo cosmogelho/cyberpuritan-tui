@@ -3,10 +3,14 @@ use crate::models::{
 };
 use chrono::Local;
 use rusqlite::{Connection, Result};
-const DB_PATH: &str = "./data/dados.db";
+
+const CANON_DB_PATH: &str = "./data/canon.db";
+const PIETY_DB_PATH: &str = "./data/piety.db";
+
+// --- Funções do Banco 'canon.db' (Dados Públicos) ---
 
 pub fn listar_salmos() -> Result<Vec<Salmo>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, referencia, melodia, tema, letra, instrumental, \"à_capela\" FROM salterio ORDER BY CAST(referencia AS INTEGER)")?;
     let salmos_iter = stmt.query_map([], |row| {
         Ok(Salmo {
@@ -21,8 +25,9 @@ pub fn listar_salmos() -> Result<Vec<Salmo>> {
     })?;
     Ok(salmos_iter.collect::<Result<Vec<Salmo>>>()?)
 }
+
 pub fn listar_capitulos_cfw() -> Result<Vec<CfwCapitulo>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT DISTINCT chapter, title FROM cfw ORDER BY chapter")?;
     let cap_iter = stmt.query_map([], |row| {
         Ok(CfwCapitulo {
@@ -32,8 +37,9 @@ pub fn listar_capitulos_cfw() -> Result<Vec<CfwCapitulo>> {
     })?;
     Ok(cap_iter.collect::<Result<Vec<CfwCapitulo>>>()?)
 }
+
 pub fn ler_capitulo_biblia(nome_livro: &str, capitulo: i32) -> Result<Vec<Versiculo>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let book_id: i32 = conn.query_row(
         "SELECT id FROM book WHERE lower(name) = lower(?1)",
         [nome_livro],
@@ -48,8 +54,9 @@ pub fn ler_capitulo_biblia(nome_livro: &str, capitulo: i32) -> Result<Vec<Versic
     })?;
     Ok(verse_iter.collect::<Result<Vec<Versiculo>>>()?)
 }
+
 pub fn ler_secoes_cfw(numero_capitulo: i32) -> Result<Vec<CfwSecao>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let mut stmt =
         conn.prepare("SELECT section, text FROM cfw WHERE chapter = ? ORDER BY section")?;
     let secoes_iter = stmt.query_map([numero_capitulo], |row| {
@@ -60,8 +67,9 @@ pub fn ler_secoes_cfw(numero_capitulo: i32) -> Result<Vec<CfwSecao>> {
     })?;
     Ok(secoes_iter.collect::<Result<Vec<CfwSecao>>>()?)
 }
+
 pub fn listar_perguntas_cmw() -> Result<Vec<CatecismoPergunta>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, question, answer FROM cmw ORDER BY id")?;
     let iter = stmt.query_map([], |row| {
         Ok(CatecismoPergunta {
@@ -72,8 +80,9 @@ pub fn listar_perguntas_cmw() -> Result<Vec<CatecismoPergunta>> {
     })?;
     Ok(iter.collect::<Result<Vec<CatecismoPergunta>>>()?)
 }
+
 pub fn listar_perguntas_bcw() -> Result<Vec<CatecismoPergunta>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(CANON_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, question, answer FROM bcw ORDER BY id")?;
     let iter = stmt.query_map([], |row| {
         Ok(CatecismoPergunta {
@@ -84,8 +93,11 @@ pub fn listar_perguntas_bcw() -> Result<Vec<CatecismoPergunta>> {
     })?;
     Ok(iter.collect::<Result<Vec<CatecismoPergunta>>>()?)
 }
+
+// --- Funções do Banco 'piety.db' (Dados Pessoais) ---
+
 pub fn listar_entradas_diario() -> Result<Vec<EntradaDiario>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, data, texto FROM diario ORDER BY data DESC")?;
     let iter = stmt.query_map([], |row| {
         Ok(EntradaDiario {
@@ -96,8 +108,9 @@ pub fn listar_entradas_diario() -> Result<Vec<EntradaDiario>> {
     })?;
     Ok(iter.collect::<Result<Vec<EntradaDiario>>>()?)
 }
+
 pub fn criar_entrada_diario(texto: &str) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute(
         "INSERT INTO diario (data, texto) VALUES (?1, ?2)",
@@ -105,8 +118,9 @@ pub fn criar_entrada_diario(texto: &str) -> Result<()> {
     )?;
     Ok(())
 }
+
 pub fn listar_acoes() -> Result<Vec<Acao>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt =
         conn.prepare("SELECT id, descricao, status FROM acoes ORDER BY status, id DESC")?;
     let iter = stmt.query_map([], |row| {
@@ -118,8 +132,9 @@ pub fn listar_acoes() -> Result<Vec<Acao>> {
     })?;
     Ok(iter.collect::<Result<Vec<Acao>>>()?)
 }
+
 pub fn criar_acao(descricao: &str) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute(
         "INSERT INTO acoes (descricao, data_criacao) VALUES (?1, ?2)",
@@ -127,18 +142,21 @@ pub fn criar_acao(descricao: &str) -> Result<()> {
     )?;
     Ok(())
 }
+
 pub fn atualizar_status_acao(id: i32, status: &str) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("UPDATE acoes SET status = ?1 WHERE id = ?2", (status, id))?;
     Ok(())
 }
+
 pub fn deletar_acao(id: i32) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("DELETE FROM acoes WHERE id = ?1", [id])?;
     Ok(())
 }
+
 pub fn listar_resolucoes() -> Result<Vec<Resolucao>> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, texto FROM resolucoes ORDER BY id DESC")?;
     let iter = stmt.query_map([], |row| {
         Ok(Resolucao {
@@ -148,8 +166,9 @@ pub fn listar_resolucoes() -> Result<Vec<Resolucao>> {
     })?;
     Ok(iter.collect::<Result<Vec<Resolucao>>>()?)
 }
+
 pub fn criar_resolucao(texto: &str) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute(
         "INSERT INTO resolucoes (texto, data_criacao) VALUES (?1, ?2)",
@@ -157,8 +176,9 @@ pub fn criar_resolucao(texto: &str) -> Result<()> {
     )?;
     Ok(())
 }
+
 pub fn deletar_resolucao(id: i32) -> Result<()> {
-    let conn = Connection::open(DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("DELETE FROM resolucoes WHERE id = ?1", [id])?;
     Ok(())
 }
