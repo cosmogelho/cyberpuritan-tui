@@ -33,15 +33,14 @@ fn handle_normal_mode(key: KeyEvent, app: &mut App) {
             KeyCode::Char('v') | KeyCode::Esc => app.current_screen = CurrentScreen::SalterioList,
             _ => {}
         },
-        // ... outras telas ...
         CurrentScreen::AcoesList => match key.code {
             KeyCode::Char('j') | KeyCode::Down => app.next(),
             KeyCode::Char('k') | KeyCode::Up => app.previous(),
             KeyCode::Char('v') | KeyCode::Esc => app.current_screen = CurrentScreen::PiedadeMenu,
             KeyCode::Char('n') => app.input_mode = InputMode::Editing,
             KeyCode::Char('d') | KeyCode::Char('c') | KeyCode::Char('p') => {
-                if let Some(index) = app.acoes_list_state.selected() {
-                    if let Some(acao) = app.acoes.get(index) {
+                if let Some(index) = app.acoes.list_state.selected() {
+                    if let Some(acao) = app.acoes.items.get(index) {
                         let id = acao.id;
                         let success = match key.code {
                             KeyCode::Char('d') => db::deletar_acao(id).is_ok(),
@@ -63,8 +62,8 @@ fn handle_normal_mode(key: KeyEvent, app: &mut App) {
             KeyCode::Char('v') | KeyCode::Esc => app.current_screen = CurrentScreen::PiedadeMenu,
             KeyCode::Char('n') => app.input_mode = InputMode::Editing,
             KeyCode::Char('d') => {
-                if let Some(index) = app.resolucoes_list_state.selected() {
-                    if let Some(res) = app.resolucoes.get(index) {
+                if let Some(index) = app.resolucoes.list_state.selected() {
+                    if let Some(res) = app.resolucoes.items.get(index) {
                         if db::deletar_resolucao(res.id).is_ok() {
                             app.refresh_resolucoes();
                         }

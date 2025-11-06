@@ -195,7 +195,7 @@ fn render_symbols_menu(app: &App, frame: &mut Frame, area: ratatui::layout::Rect
 }
 fn render_acoes_list(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["", "ID", "Descrição"]).style(app.theme.header_style);
-    let r = app.acoes.iter().map(|a| {
+    let r = app.acoes.items.iter().map(|a| {
         let (icon, s) = if a.status == "completo" {
             ("[✓]", Style::default().fg(app.theme.green).dim())
         } else {
@@ -220,12 +220,13 @@ fn render_acoes_list(app: &mut App, frame: &mut Frame, area: ratatui::layout::Re
     .block(styled_block("Ações de Santificação", &app.theme))
     .highlight_style(app.theme.selected_style)
     .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.acoes_list_state);
+    frame.render_stateful_widget(t, area, &mut app.acoes.list_state);
 }
 fn render_resolucoes_list(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["ID", "Texto"]).style(app.theme.header_style);
     let r = app
         .resolucoes
+        .items
         .iter()
         .map(|r| Row::new([r.id.to_string(), r.texto.clone()]));
     let t = Table::new(r, &[Constraint::Length(4), Constraint::Min(20)])
@@ -233,11 +234,11 @@ fn render_resolucoes_list(app: &mut App, frame: &mut Frame, area: ratatui::layou
         .block(styled_block("Minhas Resoluções", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.resolucoes_list_state);
+    frame.render_stateful_widget(t, area, &mut app.resolucoes.list_state);
 }
 fn render_diario_list(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["Data", "Início da Entrada"]).style(app.theme.header_style);
-    let r = app.diario_entradas.iter().map(|e| {
+    let r = app.diario.entries.iter().map(|e| {
         let p = e.texto.chars().take(80).collect::<String>() + "...";
         Row::new([e.data.clone(), p])
     });
@@ -246,14 +247,14 @@ fn render_diario_list(app: &mut App, frame: &mut Frame, area: ratatui::layout::R
         .block(styled_block("Diário", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.diario_list_state);
+    frame.render_stateful_widget(t, area, &mut app.diario.list_state);
 }
 fn render_diario_view(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
     if let Some(e) = app.selected_diario_entry() {
         let title = format!("Diário - {}", e.data);
         let p = Paragraph::new(e.texto.as_str())
             .wrap(Wrap { trim: true })
-            .scroll((app.diario_scroll, 0))
+            .scroll((app.diario.scroll, 0))
             .block(styled_block(&title, &app.theme))
             .style(app.theme.base_style);
         frame.render_widget(p, area);
@@ -265,7 +266,7 @@ fn render_salmo_view(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) 
         let title = format!("Salmo - {}", s.referencia);
         let p = Paragraph::new(txt)
             .wrap(Wrap { trim: true })
-            .scroll((app.salmo_scroll, 0))
+            .scroll((app.salterio.scroll, 0))
             .block(styled_block(&title, &app.theme))
             .style(app.theme.base_style);
         frame.render_widget(p, area);
@@ -274,7 +275,8 @@ fn render_salmo_view(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) 
 fn render_salmos_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["Ref.", "Melodia"]).style(app.theme.header_style);
     let r = app
-        .salmos
+        .salterio
+        .items
         .iter()
         .map(|s| Row::new([s.referencia.clone(), s.melodia.clone().unwrap_or_default()]));
     let t = Table::new(r, &[Constraint::Percentage(40), Constraint::Percentage(60)])
@@ -282,12 +284,13 @@ fn render_salmos_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::
         .block(styled_block("Saltério", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.salmos_state);
+    frame.render_stateful_widget(t, area, &mut app.salterio.list_state);
 }
 fn render_cfw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["Cap.", "Título"]).style(app.theme.header_style);
     let r = app
-        .cfw_capitulos
+        .cfw
+        .chapters
         .iter()
         .map(|c| Row::new([c.chapter.to_string(), c.title.clone()]));
     let t = Table::new(r, &[Constraint::Length(5), Constraint::Min(20)])
@@ -295,35 +298,37 @@ fn render_cfw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rec
         .block(styled_block("Confissão de Fé", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.cfw_list_state);
+    frame.render_stateful_widget(t, area, &mut app.cfw.list_state);
 }
 fn render_cfw_sections(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let text: String = app
-        .cfw_secoes
+        .cfw
+        .sections
         .iter()
         .map(|s| format!("{}. {}\n\n", s.section, s.text))
         .collect();
-    let title = format!("CFW: {}", app.cfw_capitulo_titulo);
+    let title = format!("CFW: {}", app.cfw.current_chapter_title);
     let p = Paragraph::new(text)
         .wrap(Wrap { trim: false })
-        .scroll((app.cfw_scroll, 0))
+        .scroll((app.cfw.scroll, 0))
         .block(styled_block(&title, &app.theme))
         .style(app.theme.base_style);
     frame.render_widget(p, area);
 }
 fn render_biblia_view(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
-    let txt = if app.biblia_versiculos.is_empty() {
+    let txt = if app.biblia.verses.is_empty() {
         "\n\n\nUse [e] para buscar.".to_string()
     } else {
-        app.biblia_versiculos
+        app.biblia
+            .verses
             .iter()
             .map(|v| format!("[{}] {}\n", v.verse, v.text))
             .collect()
     };
-    let title = format!("Bíblia: {}", app.biblia_referencia);
+    let title = format!("Bíblia: {}", app.biblia.reference);
     let p = Paragraph::new(txt)
         .wrap(Wrap { trim: false })
-        .scroll((app.biblia_scroll, 0))
+        .scroll((app.biblia.scroll, 0))
         .block(styled_block(&title, &app.theme))
         .style(app.theme.base_style);
     frame.render_widget(p, area);
@@ -331,7 +336,8 @@ fn render_biblia_view(app: &App, frame: &mut Frame, area: ratatui::layout::Rect)
 fn render_cmw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["Per.", "Pergunta"]).style(app.theme.header_style);
     let r = app
-        .cmw_perguntas
+        .cmw
+        .questions
         .iter()
         .map(|p| Row::new([p.id.to_string(), p.question.clone()]));
     let t = Table::new(r, &[Constraint::Length(5), Constraint::Min(20)])
@@ -339,7 +345,7 @@ fn render_cmw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rec
         .block(styled_block("Catecismo Maior", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.cmw_list_state);
+    frame.render_stateful_widget(t, area, &mut app.cmw.list_state);
 }
 fn render_cmw_answer(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
     if let Some(p) = app.selected_cmw_question() {
@@ -357,7 +363,7 @@ fn render_cmw_answer(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) 
         ];
         let par = Paragraph::new(txt)
             .wrap(Wrap { trim: true })
-            .scroll((app.cmw_scroll, 0))
+            .scroll((app.cmw.scroll, 0))
             .block(styled_block(&title, &app.theme))
             .style(app.theme.base_style);
         frame.render_widget(par, area);
@@ -366,7 +372,8 @@ fn render_cmw_answer(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) 
 fn render_bcw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rect) {
     let h = Row::new(["Per.", "Pergunta"]).style(app.theme.header_style);
     let r = app
-        .bcw_perguntas
+        .bcw
+        .questions
         .iter()
         .map(|p| Row::new([p.id.to_string(), p.question.clone()]));
     let t = Table::new(r, &[Constraint::Length(5), Constraint::Min(20)])
@@ -374,7 +381,7 @@ fn render_bcw_table(app: &mut App, frame: &mut Frame, area: ratatui::layout::Rec
         .block(styled_block("Breve Catecismo", &app.theme))
         .highlight_style(app.theme.selected_style)
         .highlight_spacing(HighlightSpacing::Always);
-    frame.render_stateful_widget(t, area, &mut app.bcw_list_state);
+    frame.render_stateful_widget(t, area, &mut app.bcw.list_state);
 }
 fn render_bcw_answer(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) {
     if let Some(p) = app.selected_bcw_question() {
@@ -392,7 +399,7 @@ fn render_bcw_answer(app: &App, frame: &mut Frame, area: ratatui::layout::Rect) 
         ];
         let par = Paragraph::new(txt)
             .wrap(Wrap { trim: true })
-            .scroll((app.cmw_scroll, 0))
+            .scroll((app.bcw.scroll, 0))
             .block(styled_block(&title, &app.theme))
             .style(app.theme.base_style);
         frame.render_widget(par, area);
