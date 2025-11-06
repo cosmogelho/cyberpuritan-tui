@@ -2,7 +2,11 @@
 name = "cyber_puritano"
 version = "0.1.0"
 edition = "2021"
-default-run = "cyber_puritano"
+default-run = "cyberpuritan-tui"
+
+repository = "https://github.com/cosmogelho/cyberpuritan-tui"
+license = "MIT"
+description = "Aplicativo TUI para estudo teológico e piedade pessoal inspirado na tradição puritana reformada."
 
 [dependencies]
 crossterm = "0.27.0"
