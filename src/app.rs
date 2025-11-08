@@ -25,9 +25,6 @@ impl App {
         self.component_stack.push(component);
     }
 
-    pub fn pop_component(&mut self) {
-        self.component_stack.pop();
-    }
 
     pub fn quit(&mut self) {
         self.should_quit = true;
