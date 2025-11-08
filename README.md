@@ -67,14 +67,15 @@ O sistema é dividido em três módulos principais, acessíveis pelas teclas `1`
 
 ---
 
-## Como Executar
-
 Para iniciar a aplicação principal:
 
 ```bash
 cargo run
 ```
 O aplicativo criará automaticamente o banco pessoal (data/piety.db) caso ainda não exista.
+
+
+---
 
 ## Navegação e Atalhos
 
