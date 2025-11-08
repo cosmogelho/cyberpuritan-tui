@@ -2,8 +2,7 @@ use super::{list_state::StatefulList, Action, Component, Module, utils};
 use crate::{app::App, db, models::PerguntaAutoExame, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::Stylize,
+    layout::{Constraint, Direction, Layout},
     widgets::{HighlightSpacing, Paragraph, Row, Table},
     Frame,
 };

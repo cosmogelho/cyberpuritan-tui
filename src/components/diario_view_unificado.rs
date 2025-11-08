@@ -1,7 +1,6 @@
 use super::{Action, Component, Module};
 use crate::{db, models::{AutoExameDetail, SermaoDetail}, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::style::Stylize;
 use ratatui::{text::{Line, Span}, widgets::{Paragraph, Wrap}, Frame};
 
 pub enum EntryDetail {
