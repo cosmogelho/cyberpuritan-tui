@@ -95,7 +95,7 @@ pub fn listar_perguntas_bcw() -> RusqliteResult<Vec<CatecismoPergunta>> {
 }
 
 pub fn listar_entradas_diario() -> RusqliteResult<Vec<EntradaDiarioLegado>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, data, texto FROM diario ORDER BY data DESC")?;
     let iter = stmt.query_map([], |row| {
         Ok(EntradaDiarioLegado {
@@ -108,54 +108,54 @@ pub fn listar_entradas_diario() -> RusqliteResult<Vec<EntradaDiarioLegado>> {
 }
 
 pub fn criar_entrada_diario(texto: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute("INSERT INTO diario (data, texto) VALUES (?1, ?2)", (data_atual, texto))?;
     Ok(())
 }
 
 pub fn listar_acoes() -> RusqliteResult<Vec<Acao>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, descricao, status FROM acoes ORDER BY status, id DESC")?;
     let iter = stmt.query_map([], |row| Ok(Acao { id: row.get(0)?, descricao: row.get(1)?, status: row.get(2)? }))?;
     Ok(iter.collect::<RusqliteResult<Vec<Acao>>>()?)
 }
 
 pub fn criar_acao(descricao: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute("INSERT INTO acoes (descricao, data_criacao) VALUES (?1, ?2)", (descricao, data_atual))?;
     Ok(())
 }
 
 pub fn atualizar_status_acao(id: i32, status: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("UPDATE acoes SET status = ?1 WHERE id = ?2", (status, id))?;
     Ok(())
 }
 
 pub fn deletar_acao(id: i32) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("DELETE FROM acoes WHERE id = ?1", [id])?;
     Ok(())
 }
 
 pub fn listar_resolucoes() -> RusqliteResult<Vec<Resolucao>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, texto FROM resolucoes ORDER BY id DESC")?;
     let iter = stmt.query_map([], |row| Ok(Resolucao { id: row.get(0)?, texto: row.get(1)? }))?;
     Ok(iter.collect::<RusqliteResult<Vec<Resolucao>>>()?)
 }
 
 pub fn criar_resolucao(texto: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute("INSERT INTO resolucoes (texto, data_criacao) VALUES (?1, ?2)", (texto, data_atual))?;
     Ok(())
 }
 
 pub fn deletar_resolucao(id: i32) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("DELETE FROM resolucoes WHERE id = ?1", [id])?;
     Ok(())
 }
@@ -198,7 +198,7 @@ pub fn listar_perguntas_padrao(categoria: &str) -> RusqliteResult<Vec<PerguntaAu
 // --- Funções de Gerenciamento de Perguntas do Usuário ---
 
 pub fn listar_perguntas_usuario(categoria: &str) -> RusqliteResult<Vec<PerguntaAutoExame>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, categoria, texto_pergunta, is_active FROM perguntas_usuario WHERE categoria = ?1")?;
     let iter = stmt.query_map([categoria], |row| Ok(PerguntaAutoExame {
         id: row.get(0)?,
@@ -211,36 +211,36 @@ pub fn listar_perguntas_usuario(categoria: &str) -> RusqliteResult<Vec<PerguntaA
 }
 
 pub fn criar_pergunta_usuario(categoria: &str, texto: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("INSERT INTO perguntas_usuario (categoria, texto_pergunta, is_active) VALUES (?1, ?2, 1)", (categoria, texto))?;
     Ok(())
 }
 
 pub fn atualizar_pergunta_usuario(id: i32, texto: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("UPDATE perguntas_usuario SET texto_pergunta = ?1 WHERE id = ?2", (texto, id))?;
     Ok(())
 }
 
 pub fn desativar_pergunta_padrao(categoria: &str, texto: &str) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("INSERT INTO perguntas_usuario (categoria, texto_pergunta, is_active) VALUES (?1, ?2, 0)", (categoria, texto))?;
     Ok(())
 }
 
 pub fn alternar_estado_pergunta_usuario(id: i32, is_active: bool) -> RusqliteResult<()> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.execute("UPDATE perguntas_usuario SET is_active = ?1 WHERE id = ?2", (is_active, id))?;
     Ok(())
 }
 
 pub fn obter_estado_pergunta_padrao(texto: &str) -> RusqliteResult<Option<bool>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     conn.query_row("SELECT is_active FROM perguntas_usuario WHERE texto_pergunta = ?1", [texto], |row| row.get(0)).optional()
 }
 
 pub fn get_pergunta_texto_por_id(id: i32) -> RusqliteResult<String> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     if let Some(res) = conn.query_row("SELECT texto_pergunta FROM perguntas_usuario WHERE id = ?1", [id], |row| row.get(0)).optional()? {
         return Ok(res);
     }
@@ -307,7 +307,7 @@ pub fn criar_entrada_evangelismo(tipo_contato: &str, resultado: &str, observacao
 // --- Funções de Leitura de Entradas do Diário ---
 
 pub fn get_entradas_diario_range(start_date: &str, end_date: &str) -> RusqliteResult<Vec<DiarioEntrada>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT id, data, tipo, passo_pratico FROM diario_entradas WHERE data BETWEEN ?1 AND ?2 ORDER BY data DESC")?;
     let iter = stmt.query_map((start_date, end_date), |row| {
         let tipo: String = row.get(2)?;
@@ -323,7 +323,7 @@ pub fn get_entradas_diario_range(start_date: &str, end_date: &str) -> RusqliteRe
 }
 
 pub fn get_sermao_details(id: i32) -> RusqliteResult<Option<SermaoDetail>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let mut stmt = conn.prepare("SELECT pregador, titulo, passagens, pontos_chave, aplicacao_pessoal FROM entradas_sermoes WHERE id = ?1")?;
     let mut rows = stmt.query_map([id], |row| Ok(SermaoDetail {
         pregador: row.get(0)?, titulo: row.get(1)?, passagens: row.get(2)?,
@@ -333,7 +333,7 @@ pub fn get_sermao_details(id: i32) -> RusqliteResult<Option<SermaoDetail>> {
 }
 
 pub fn get_autoexame_details(id: i32) -> RusqliteResult<Option<AutoExameDetail>> {
-    let mut conn = Connection::open(PIETY_DB_PATH)?;
+    let conn = Connection::open(PIETY_DB_PATH)?;
     let passo_pratico: String = conn.query_row("SELECT passo_pratico FROM diario_entradas WHERE id = ?1", [id], |row| row.get(0))?;
     let respostas_json: String = conn.query_row("SELECT respostas FROM entradas_auto_exame WHERE id = ?1", [id], |row| row.get(0))?;
 

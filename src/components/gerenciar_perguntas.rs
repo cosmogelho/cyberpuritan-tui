@@ -3,7 +3,7 @@ use crate::{app::App, db, models::PerguntaAutoExame, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Style, Stylize},
+    style::{Stylize},
     widgets::{HighlightSpacing, Paragraph, Row, Table},
     Frame,
 };

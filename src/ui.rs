@@ -2,7 +2,7 @@ use crate::{app::App, components::Module, db, theme::Theme};
 use chrono::{Datelike, Local};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
