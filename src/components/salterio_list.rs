@@ -1,5 +1,5 @@
 use super::{
-    estudo_menu::EstudoMenuComponent, list_state::StatefulList, piedade_menu::PiedadeMenuComponent,
+    estudo_menu::EstudoMenuComponent, list_state::StatefulList,
     salmo_view::SalmoViewComponent, Action, Component, Module,
 };
 use crate::{app::App, db, models::Salmo, theme::Theme};
@@ -92,7 +92,7 @@ impl Component for SalterioListComponent {
             KeyCode::Char('j') | KeyCode::Down => self.list.next(),
             KeyCode::Char('k') | KeyCode::Up => self.list.previous(),
             KeyCode::Char('/') => self.input_mode = InputMode::Filtering,
-            KeyCode::Char('2') => return Some(Action::Navigate(Box::new(PiedadeMenuComponent))),
+KeyCode::Char('2') => return Some(Action::Navigate(Box::new(PiedadeDashboardComponent))),
             KeyCode::Char('3') => return Some(Action::Navigate(Box::new(EstudoMenuComponent))),
             KeyCode::Enter => {
                 if let Some(salmo) = self.selected_salmo() {

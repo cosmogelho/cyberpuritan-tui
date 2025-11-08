@@ -105,10 +105,61 @@ fn criar_banco_se_nao_existir() {
     let conexao = Connection::open(caminho).unwrap();
     conexao.execute_batch(
         "
-        CREATE TABLE diario(id INTEGER PRIMARY KEY, data TEXT, texto TEXT);
-        CREATE TABLE acoes(id INTEGER PRIMARY KEY, descricao TEXT, status TEXT, data_criacao TEXT);
-        CREATE TABLE resolucoes(id INTEGER PRIMARY KEY, texto TEXT, data_criacao TEXT);
-        CREATE TABLE sermoes(id INTEGER PRIMARY KEY, titulo TEXT, tema TEXT, pregador TEXT, local TEXT, data TEXT, link TEXT, passagem_principal TEXT);
-        CREATE TABLE notas_estudo(id INTEGER PRIMARY KEY, referencia_biblica TEXT, texto TEXT, data_criacao TEXT);
-        ").unwrap();
+        -- Tabela Central
+        CREATE TABLE diario_entradas(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data TEXT NOT NULL,
+            tipo TEXT NOT NULL, -- 'AUTO_EXAME', 'SERMAO', 'RESOLUCAO', 'LEITURA', 'JEJUM', 'NOTA', 'EVANGELISMO'
+            passo_pratico TEXT,
+            tags TEXT
+        );
+
+        -- Tabelas Específicas
+        CREATE TABLE entradas_auto_exame(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            respostas TEXT -- Armazenar como JSON: [{'pergunta_id': 1, 'avaliacao': 'Boa'}, ...]
+        );
+        CREATE TABLE entradas_sermoes(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            pregador TEXT,
+            titulo TEXT,
+            passagens TEXT,
+            pontos_chave TEXT,
+            aplicacao_pessoal TEXT
+        );
+        CREATE TABLE entradas_resolucoes(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            numero_edwards INTEGER,
+            texto_resolucao TEXT NOT NULL,
+            objetivo_concreto TEXT,
+            metrica TEXT,
+            status TEXT DEFAULT 'ativa'
+        );
+        CREATE TABLE entradas_leitura_biblica(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            tema_semanal TEXT,
+            passagens_lidas TEXT,
+            salmo_do_dia TEXT,
+            aplicacao TEXT
+        );
+        CREATE TABLE entradas_jejum(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            tipo_jejum TEXT NOT NULL,
+            proposito TEXT,
+            observacoes TEXT
+        );
+        CREATE TABLE entradas_evangelismo(
+            id INTEGER PRIMARY KEY, -- FK para diario_entradas.id
+            tipo_contato TEXT,
+            resultado TEXT,
+            observacao TEXT
+        );
+        CREATE TABLE perguntas_usuario(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            categoria TEXT NOT NULL,
+            texto_pergunta TEXT NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT 1
+        );
+        "
+    ).unwrap();
 }
