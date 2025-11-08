@@ -93,12 +93,6 @@ pub fn listar_perguntas_bcw() -> RusqliteResult<Vec<CatecismoPergunta>> {
     Ok(iter.collect::<RusqliteResult<Vec<CatecismoPergunta>>>()?)
 }
 
-pub fn criar_entrada_diario(texto: &str) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    conn.execute("INSERT INTO diario (data, texto) VALUES (?1, ?2)", (data_atual, texto))?;
-    Ok(())
-}
 
 pub fn listar_livros() -> RusqliteResult<Vec<Livro>> {
     let conn = Connection::open(CANON_DB_PATH)?;

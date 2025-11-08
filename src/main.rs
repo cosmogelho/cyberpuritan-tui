@@ -15,10 +15,9 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use rusqlite::Connection;
-use std::io::{self, stdout, Read, Stdout};
+use std::io::{self, stdout, Stdout};
 use std::path::Path;
 use std::time::Duration;
-use tempfile::NamedTempFile;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     criar_banco_se_nao_existir();
@@ -40,7 +39,7 @@ fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> io::
             if let Event::Key(key) = event::read()? {
                 if let Some(mut component) = app.component_stack.pop() {
                     let action = component.handle_key_events(key, app);
-                    
+
                     if let Some(action) = action {
                         match action {
                             Action::Quit => app.quit(),
@@ -48,14 +47,6 @@ fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> io::
                             Action::Navigate(new_component) => {
                                 app.component_stack.push(component);
                                 app.component_stack.push(new_component);
-                            }
-                            Action::LaunchEditor => {
-                                app.component_stack.push(component);
-                                restore_terminal()?;
-                                let _ = launch_editor_and_save_entry();
-                                enable_raw_mode()?;
-                                stdout().execute(EnterAlternateScreen)?;
-                                terminal.clear()?;
                             }
                         }
                     } else {
@@ -72,22 +63,6 @@ fn run(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> io::
     Ok(())
 }
 
-fn launch_editor_and_save_entry() -> io::Result<()> {
-    use std::{fs, process::Command};
-    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
-    let temp_file = NamedTempFile::new()?;
-    let temp_path = temp_file.path();
-    if !Command::new(&editor).arg(temp_path).status()?.success() {
-        return Ok(());
-    }
-    let mut contents = String::new();
-    fs::File::open(temp_path)?.read_to_string(&mut contents)?;
-    if !contents.trim().is_empty() {
-        db::criar_entrada_diario(&contents).ok();
-    }
-    Ok(())
-}
-
 fn setup_terminal() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
@@ -100,11 +75,14 @@ fn restore_terminal() -> io::Result<()> {
 }
 fn criar_banco_se_nao_existir() {
     let caminho = "data/piety.db";
-    if Path::new(caminho).exists() { return; }
+    if Path::new(caminho).exists() {
+        return;
+    }
     std::fs::create_dir_all("data").unwrap();
     let conexao = Connection::open(caminho).unwrap();
-    conexao.execute_batch(
-        "
+    conexao
+        .execute_batch(
+            "
         -- Tabela Central
         CREATE TABLE diario_entradas(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,6 +138,7 @@ fn criar_banco_se_nao_existir() {
             texto_pergunta TEXT NOT NULL,
             is_active BOOLEAN NOT NULL DEFAULT 1
         );
-        "
-    ).unwrap();
+        ",
+        )
+        .unwrap();
 }
