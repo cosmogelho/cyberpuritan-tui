@@ -7,7 +7,6 @@ pub enum EntryDetail {
     Sermao(SermaoDetail),
     AutoExame(AutoExameDetail),
     NotImplemented(String),
-    Loading,
 }
 
 pub struct DiarioViewUnificadoComponent {
@@ -46,7 +45,6 @@ impl Component for DiarioViewUnificadoComponent {
     fn render(&mut self, frame: &mut Frame, theme: &Theme) {
         let chunks = crate::ui::get_layout_chunks(frame.size());
         let (title, text): (&str, Vec<Line>) = match &self.detail {
-            EntryDetail::Loading => ("Carregando...", vec![Line::from("Aguarde...")]),
             EntryDetail::NotImplemented(msg) => ("Não Implementado", vec![Line::from(msg.clone())]),
             EntryDetail::Sermao(s) => ("Detalhes do Sermão", vec![
                 Line::from(vec![Span::styled("Pregador: ", theme.header_style), Span::raw(&s.pregador)]),
