@@ -70,10 +70,3 @@ impl App {
         }
     }
 }
-
-#[derive(Clone, Copy, Debug)]
-pub enum MessageType {
-    Info,
-    Success,
-    Error,
-}
