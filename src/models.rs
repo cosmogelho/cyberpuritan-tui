@@ -65,29 +65,6 @@ pub struct Salmo {
     pub a_capela: Option<String>,
 }
 
-/// Representa uma ação de santificação.
-#[derive(Clone, Debug)]
-pub struct Acao {
-    pub id: i32,
-    pub descricao: String,
-    pub status: String,
-}
-
-/// Representa uma resolução pessoal.
-#[derive(Clone, Debug)]
-pub struct Resolucao {
-    pub id: i32,
-    pub texto: String,
-}
-
-/// Representa uma entrada do diário (legado).
-#[derive(Clone, Debug)]
-pub struct EntradaDiarioLegado {
-    pub _id: i32,
-    pub data: String,
-    pub texto: String,
-}
-
 /// Representa um capítulo da Confissão de Fé de Westminster.
 #[derive(Clone, Debug)]
 pub struct CfwCapitulo {

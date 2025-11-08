@@ -1,7 +1,6 @@
 use crate::models::{
-    Acao, AutoExameDetail, CatecismoPergunta, CfwCapitulo, CfwSecao, DiarioEntrada,
-    EntradaDiarioLegado, Livro, OracaoPuritana, PerguntaAutoExame, RespostaDetail,
-    RespostaJson, Resolucao, Salmo, SermaoDetail, Versiculo,
+    AutoExameDetail, CatecismoPergunta, CfwCapitulo, CfwSecao, DiarioEntrada, Livro,
+    OracaoPuritana, PerguntaAutoExame, RespostaDetail, RespostaJson, Salmo, SermaoDetail, Versiculo,
 };
 use chrono::Local;
 use rusqlite::{Connection, OptionalExtension, Result as RusqliteResult};
@@ -94,69 +93,10 @@ pub fn listar_perguntas_bcw() -> RusqliteResult<Vec<CatecismoPergunta>> {
     Ok(iter.collect::<RusqliteResult<Vec<CatecismoPergunta>>>()?)
 }
 
-pub fn listar_entradas_diario() -> RusqliteResult<Vec<EntradaDiarioLegado>> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let mut stmt = conn.prepare("SELECT id, data, texto FROM diario ORDER BY data DESC")?;
-    let iter = stmt.query_map([], |row| {
-        Ok(EntradaDiarioLegado {
-            _id: row.get(0)?,
-            data: row.get(1)?,
-            texto: row.get(2)?,
-        })
-    })?;
-    Ok(iter.collect::<RusqliteResult<Vec<EntradaDiarioLegado>>>()?)
-}
-
 pub fn criar_entrada_diario(texto: &str) -> RusqliteResult<()> {
     let conn = Connection::open(PIETY_DB_PATH)?;
     let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     conn.execute("INSERT INTO diario (data, texto) VALUES (?1, ?2)", (data_atual, texto))?;
-    Ok(())
-}
-
-pub fn listar_acoes() -> RusqliteResult<Vec<Acao>> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let mut stmt = conn.prepare("SELECT id, descricao, status FROM acoes ORDER BY status, id DESC")?;
-    let iter = stmt.query_map([], |row| Ok(Acao { id: row.get(0)?, descricao: row.get(1)?, status: row.get(2)? }))?;
-    Ok(iter.collect::<RusqliteResult<Vec<Acao>>>()?)
-}
-
-pub fn criar_acao(descricao: &str) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    conn.execute("INSERT INTO acoes (descricao, data_criacao) VALUES (?1, ?2)", (descricao, data_atual))?;
-    Ok(())
-}
-
-pub fn atualizar_status_acao(id: i32, status: &str) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    conn.execute("UPDATE acoes SET status = ?1 WHERE id = ?2", (status, id))?;
-    Ok(())
-}
-
-pub fn deletar_acao(id: i32) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    conn.execute("DELETE FROM acoes WHERE id = ?1", [id])?;
-    Ok(())
-}
-
-pub fn listar_resolucoes() -> RusqliteResult<Vec<Resolucao>> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let mut stmt = conn.prepare("SELECT id, texto FROM resolucoes ORDER BY id DESC")?;
-    let iter = stmt.query_map([], |row| Ok(Resolucao { id: row.get(0)?, texto: row.get(1)? }))?;
-    Ok(iter.collect::<RusqliteResult<Vec<Resolucao>>>()?)
-}
-
-pub fn criar_resolucao(texto: &str) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    let data_atual = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    conn.execute("INSERT INTO resolucoes (texto, data_criacao) VALUES (?1, ?2)", (texto, data_atual))?;
-    Ok(())
-}
-
-pub fn deletar_resolucao(id: i32) -> RusqliteResult<()> {
-    let conn = Connection::open(PIETY_DB_PATH)?;
-    conn.execute("DELETE FROM resolucoes WHERE id = ?1", [id])?;
     Ok(())
 }
 
