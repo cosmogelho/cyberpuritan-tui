@@ -66,9 +66,9 @@ Este módulo funciona como um sistema de registro para atividades devocionais.
 
 Para iniciar a aplicação principal:
 
-´´´
+```
 cargo run
-´´´
+```
 
 O aplicativo criará automaticamente o banco pessoal (data/piety.db) caso ainda não exista.
 
