@@ -1,4 +1,4 @@
-use super::{list_state::StatefulList, Action, Component, Module};
+use super::{list_state::StatefulList, Action, Component, Module, utils};
 use crate::{app::App, db, models::PerguntaAutoExame, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -34,12 +34,7 @@ pub struct NovaEntradaAutoExameComponent {
 
 impl NovaEntradaAutoExameComponent {
     pub fn new() -> Self {
-        let categorias_vec = vec![
-            "A - Relacionamento com Deus", "B - Motivações e Coração", "C - Escritura e Palavra",
-            "D - Família e Relacionamentos", "E - Trabalho / Estudos / Serviço", "F - Comunhão dos Santos",
-            "G - Lazer, Mídia e Tempo Livre", "H - Saúde Física e Mental", "I - Finanças",
-            "J - Testemunho e Missão",
-        ].into_iter().map(String::from).collect();
+        let categorias_vec = utils::get_categorias_autoexame();
         let mut component = Self {
             step: Step::Selecao,
             categorias: StatefulList::with_items(categorias_vec),

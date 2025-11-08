@@ -1,4 +1,4 @@
-use super::{bcw_answer::BcwAnswerComponent, Action, Component, Module};
+use super::{catecismo_answer::CatecismoAnswerComponent, Action, Component, Module};
 use crate::{app::App, db, models::CatecismoPergunta, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{layout::Constraint, widgets::{HighlightSpacing, Paragraph, Row, Table, TableState}, Frame};
@@ -35,7 +35,7 @@ impl Component for BcwListComponent {
             KeyCode::Char('v') | KeyCode::Esc => Some(Action::Pop),
             KeyCode::Char('j') | KeyCode::Down => { self.next(); None },
             KeyCode::Char('k') | KeyCode::Up => { self.previous(); None },
-            KeyCode::Enter => self.get_selected_item().map(|q| Action::Navigate(Box::new(BcwAnswerComponent::new(q.clone())))),
+            KeyCode::Enter => self.get_selected_item().map(|q| Action::Navigate(Box::new(CatecismoAnswerComponent::new("BCW", q.clone())))),
             _ => None,
         }
     }

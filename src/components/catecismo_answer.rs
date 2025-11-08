@@ -3,16 +3,23 @@ use crate::{models::CatecismoPergunta, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{style::Stylize, text::{Line, Span}, widgets::{Paragraph, Wrap}, Frame};
 
-pub struct BcwAnswerComponent {
+pub struct CatecismoAnswerComponent {
+    prefix: String,
     question: CatecismoPergunta,
     scroll: u16,
 }
 
-impl BcwAnswerComponent {
-    pub fn new(question: CatecismoPergunta) -> Self { Self { question, scroll: 0 } }
+impl CatecismoAnswerComponent {
+    pub fn new(prefix: &str, question: CatecismoPergunta) -> Self {
+        Self {
+            prefix: prefix.to_string(),
+            question,
+            scroll: 0,
+        }
+    }
 }
 
-impl Component for BcwAnswerComponent {
+impl Component for CatecismoAnswerComponent {
     fn get_module(&self) -> Module { Module::Estudo }
     fn handle_key_events(&mut self, key: KeyEvent, _app: &mut crate::app::App) -> Option<Action> {
         match key.code {
@@ -25,7 +32,7 @@ impl Component for BcwAnswerComponent {
     }
     fn render(&mut self, frame: &mut Frame, theme: &Theme) {
         let chunks = crate::ui::get_layout_chunks(frame.size());
-        let title = format!("BCW Pergunta {}", self.question.id);
+        let title = format!("{} Pergunta {}", self.prefix, self.question.id);
         let txt = vec![
             Line::from(vec![Span::styled("P: ", theme.header_style.bold()), Span::raw(&self.question.question)]),
             Line::from(""),
