@@ -8,9 +8,9 @@ use chrono::{Datelike, Days, Local, NaiveDate};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 use std::collections::HashMap;
@@ -71,46 +71,34 @@ impl PiedadeDashboardComponent {
         let block = crate::ui::styled_block("Atividade Espiritual (Últimos 4 Meses)", theme);
         let inner_area = block.inner(area);
         frame.render_widget(block, area);
-
-        let today = Local::now().date_naive();
-        let num_days = 120;
-        let start_date = today.checked_sub_days(Days::new(num_days - 1)).unwrap();
         
-        let mut heatmap_spans = Vec::new();
-        let month_names = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-        let mut last_month = 0;
-
-        heatmap_spans.push(Line::from("    "));
-        let mut week_pos = 0;
-        for i in 0..num_days {
-            let date = start_date.checked_add_days(Days::new(i)).unwrap();
-            if date.weekday() == chrono::Weekday::Sun {
-                if date.month() != last_month {
-                    { let padding = " ".repeat(week_pos * 4 - heatmap_spans[0].width()); heatmap_spans[0].spans.push(Span::raw(padding)); }
-                    heatmap_spans[0].spans.push(Span::raw(format!("{:<3}", month_names[date.month() as usize])));
-                    last_month = date.month();
-                }
-                week_pos +=1;
-            }
-        }
-
-        for day_of_week in [0,2,4,6] { // Sun, Tue, Thu, Sat
-            let mut line = Line::from(match day_of_week {
-                0 => " D ", 2 => " Q ", 4 => " S ", 6 => " S ", _ => "   "
-            });
-            for i in 0..num_days {
+        let today = Local::now().date_naive();
+        let days_to_show = 120;
+        let start_date = today.checked_sub_days(Days::new(days_to_show -1)).unwrap();
+        
+        let mut lines = Vec::new();
+        
+        for day_of_week in 0..7 {
+            let mut line = Line::default();
+            for i in 0..days_to_show {
                 let date = start_date.checked_add_days(Days::new(i)).unwrap();
                 if date.weekday().num_days_from_sunday() == day_of_week {
-                    let score = *self.scores.get(&date).unwrap_or(&0);
-                    let color = match score {
-                        0 => theme.dim_fg,
-                        1 => Color::Rgb(0, 100, 0), 2..=3 => Color::Rgb(0, 175, 0), _ => Color::Rgb(0, 255, 0),
-                    };
-                    line.spans.push(Span::styled("■ ", Style::default().fg(color)));
+                    if date > today {
+                        line.spans.push(Span::raw("  "));
+                    } else {
+                        let score = *self.scores.get(&date).unwrap_or(&0);
+                        let color = match score {
+                            0 => theme.dim_fg,
+                            1 => Color::Rgb(0, 100, 0),
+                            2..=3 => Color::Rgb(0, 175, 0),
+                            _ => Color::Rgb(0, 255, 0),
+                        };
+                        line.spans.push(Span::styled("■ ", Style::default().fg(color)));
+                    }
                 }
             }
-            heatmap_spans.push(line);
+            lines.push(line);
         }
-        frame.render_widget(Paragraph::new(heatmap_spans), inner_area);
+        frame.render_widget(Paragraph::new(lines), inner_area);
     }
 }

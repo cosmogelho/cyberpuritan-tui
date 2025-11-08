@@ -1,12 +1,9 @@
 use super::{Action, Component, Module};
 use crate::{db, theme::Theme};
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    layout::{Margin, Rect},
-    widgets::Paragraph,
-    Frame,
-};
+use ratatui::{layout::{Margin, Rect}, widgets::Paragraph, Frame};
 
+#[derive(PartialEq)]
 enum FocusedField { Texto, Objetivo, Metrica }
 enum InputMode { Normal, Editing }
 
@@ -83,10 +80,10 @@ impl Component for NovaEntradaResolucaoComponent {
         for (i, (label, value, field_enum)) in fields.iter().enumerate() {
             let area = Rect::new(inner_area.x, inner_area.y + i as u16 * 2, inner_area.width, 1);
             let mut style = theme.base_style;
-            if matches!(&self.focused, field_enum) { style = theme.selected_style; }
+            if self.focused == *field_enum { style = theme.selected_style; }
             let text = format!("{}: {}", label, value);
             frame.render_widget(Paragraph::new(text).style(style), area);
-            if matches!(&self.focused, field_enum) && matches!(self.input_mode, InputMode::Editing) {
+            if self.focused == *field_enum && matches!(self.input_mode, InputMode::Editing) {
                 frame.set_cursor(area.x + label.len() as u16 + 2 + value.len() as u16, area.y);
             }
         }
