@@ -74,11 +74,12 @@ fn restore_terminal() -> io::Result<()> {
     Ok(())
 }
 fn criar_banco_se_nao_existir() {
-    let caminho = "data/piety.db";
-    if Path::new(caminho).exists() {
+    let base_dir = format!("{}/data", env!("CARGO_MANIFEST_DIR"));
+    let caminho = format!("{}/piety.db", base_dir);
+    if Path::new(&caminho).exists() {
         return;
     }
-    std::fs::create_dir_all("data").unwrap();
+    std::fs::create_dir_all(base_dir).unwrap();
     let conexao = Connection::open(caminho).unwrap();
     conexao
         .execute_batch(
